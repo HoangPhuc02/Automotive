@@ -27,6 +27,11 @@
  Channel is the same as pin in the hardware,
  ChannelGroup is a group of channels (pins) on the same port.
 */   
+#define DIO_VENDOR_ID           0x1234  /* Vendor ID for DIO driver */ 
+#define DIO_MODULE_ID           0x5678  /* Module ID for DIO driver */
+#define DIO_SW_MAJOR_VERSION    1
+#define DIO_SW_MINOR_VERSION    0
+#define DIO_SW_PATCH_VERSION    0
 
 
 /****************************************************************************************
@@ -49,7 +54,7 @@
 /* Macro to identify GPIO pin */
 #define DIO_GET_PIN_CHANNEL_ID(ChannelId)    (1U << ((ChannelId) % 16))
 
-/* 
+/**  
 * Macro to identify Channel ID
 * @param[in] GPIOx: GPIO port (A, B, C, D, etc.)
 * @param[in] Pin: GPIO pin number (0-15)

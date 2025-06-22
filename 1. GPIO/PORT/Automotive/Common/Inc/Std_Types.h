@@ -45,7 +45,7 @@ typedef unsigned long long  uint64;     /* 64-bit unsigned integer  */
 *                              POINTER  DEFINITIONS                                     *
 ****************************************************************************************/
 #define NULL_PTR ((void*)0) /* Null pointer definition */
-
+#define NULL     ((void*)0)    /* Null pointer definition for compatibility */
 /****************************************************************************************
 *                              STANDARD RETURN TYPES                                   *
 ****************************************************************************************/

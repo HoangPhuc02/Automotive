@@ -23,11 +23,7 @@
 *                              VERSION INFORMATION                                     *
 ****************************************************************************************/
 
-#define DIO_VENDOR_ID           0x1234  /* Vendor ID for DIO driver */ 
-#define DIO_MODULE_ID           0x5678  /* Module ID for DIO driver */
-#define DIO_SW_MAJOR_VERSION    1
-#define DIO_SW_MINOR_VERSION    0
-#define DIO_SW_PATCH_VERSION    0
+
 /****************************************************************************************
 *                              COMMON MACROS                                           *
 ****************************************************************************************/

@@ -1,4 +1,4 @@
-/****************************************************************************************
+/***************************************************************************************
 *                                   DIO.H                                              *
 ****************************************************************************************
 * File Name   : Dio.h
@@ -26,12 +26,18 @@
  Port is the same as port in the hardware,
  Channel is the same as pin in the hardware,
  ChannelGroup is a group of channels (pins) on the same port.
-*/   
+*/  
+#define DIO_VENDOR_ID           0x1234  /* Vendor ID for DIO driver */ 
+#define DIO_MODULE_ID           0x5678  /* Module ID for DIO driver */
+#define DIO_SW_MAJOR_VERSION    1
+#define DIO_SW_MINOR_VERSION    0
+#define DIO_SW_PATCH_VERSION    0 
 
 
 /****************************************************************************************
-* MACRO TO IDENTIFY GPIO PORT AND GPIO PIN FROM CHANNEL ID                             *
+*                                   MACRO                                               *
 ****************************************************************************************/
+/* Macro to identify GPIO PORT and GPIO PIN from Channel ID */
 #define DIO_PORT_A 0    /* Mapping for GPIO Port A */
 #define DIO_PORT_B 1    /* Mapping for GPIO Port B */
 #define DIO_PORT_C 2    /* Mapping for GPIO Port C */
@@ -66,9 +72,8 @@
                                         (PortId == DIO_PORT_C) ? GPIOC : \
                                         (PortId == DIO_PORT_D) ? GPIOD : NULL_PTR)
 */   
-/**********************************************************************************
- * MACRO TO CONVERT GPIO PIN TO CHANNEL ID
- ****************************************************************************************/
+
+/* MACRO TO CONVERT GPIO PIN TO CHANNEL ID */
 #define DIO_CHANNEL_A0      DIO_GET_CHANNEL_ID(DIO_PORT_A, 0)  // GPIOA Pin 0
 #define DIO_CHANNEL_A1      DIO_GET_CHANNEL_ID(DIO_PORT_A, 1)  // GPIOA Pin 1
 #define DIO_CHANNEL_A2      DIO_GET_CHANNEL_ID(DIO_PORT_A, 2)  // GPIOA Pin 2
@@ -139,37 +144,37 @@
 /***************************************************************************************
  *                              TYPE DEFINITIONS                                        *
 ****************************************************************************************/
-/*
-    * @typedef Dio_ChannelType
-    * @brief Type for DIO channel ID.
-    * @note This type is used to identify a specific channel (pin) on a port.
-    *       The channel ID is typically defined in the DIO configuration file.
-*/
+/**
+ * @typedef Dio_ChannelType
+ * @brief Type for DIO channel ID.
+ * @note This type is used to identify a specific channel (pin) on a port.
+ *       The channel ID is typically defined in the DIO configuration file.
+ */
 typedef uint8 Dio_ChannelType;    // ID of DIO channel
 
-/*
-    * @typedef Dio_PortType
-    * @brief Type for DIO port ID.
-    * @note This type is used to identify a specific port in the DIO driver.
-    *       The port ID is typically defined in the DIO configuration file.
-*/
+/** 
+ * @typedef Dio_PortType
+ * @brief Type for DIO port ID.
+ * @note This type is used to identify a specific port in the DIO driver.
+ *       The port ID is typically defined in the DIO configuration file.
+ */
 typedef uint8 Dio_PortType;       // Type for DIO port
 
-/*
-    * @typedef Dio_LevelType
-    * @brief Type for DIO level (high or low).
-    * @note This type is used to represent the physical level of a pin (channel).
-    *       It can be either high (STD_HIGH) or low (STD_LOW).
-*/
+/** 
+ * @typedef Dio_LevelType
+ * @brief Type for DIO level (high or low).
+ * @note This type is used to represent the physical level of a pin (channel).
+ *       It can be either high (STD_HIGH) or low (STD_LOW).
+ */
 typedef uint8 Dio_LevelType;     // Type for DIO level (high or low) 
 
-/*
-    * @typedef Dio_ChannelGroupType
-    * @brief Type for DIO channel group.
-    * @note This type is used to define a group of channels (pins) on the same port.
-    *       It includes a mask to specify which channels are included in the group,
-    *       an offset to indicate the position of the group, and the port to which it belongs.
-*/
+/** 
+ * @typedef Dio_ChannelGroupType
+ * @brief Type for DIO channel group.
+ * @note This type is used to define a group of channels (pins) on the same port.
+ *       It includes a mask to specify which channels are included in the group,
+ *       an offset to indicate the position of the group, and the port to which it belongs.
+ */
 typedef struct 
 {
     uint16 mask;                  // Mask of the channel group's position
@@ -198,13 +203,13 @@ typedef uint16 Dio_PortLevelType; // Size of the largest port (4/8/16/... bits)
 *                              FUNCTION PROTOTYPES                                     *
 ****************************************************************************************/
 /* Channel read-write function*/
-/*
-    * @brief Return the value of the specified channel.
-    * @param Channel ID: ID of the channel to be initialized.
-    * @return Dio_LevelType: The level of the channel (high or low).
-    * @note STD_HIGH: The physical level of the pin is high.
-    *       STD_LOW: The physical level of the pin is low.
-    * @error DIO_E_PARAM_INVALID_CHANNEL_ID: If the channel ID is invalid.
+/**
+ * @brief Return the value of the specified channel.
+ * @param[in] Channel ID: ID of the channel to be initialized.
+ * @return Dio_LevelType: The level of the channel (high or low).
+ * @note STD_HIGH: The physical level of the pin is high.
+ *       STD_LOW: The physical level of the pin is low.
+ * @error DIO_E_PARAM_INVALID_CHANNEL_ID: If the channel ID is invalid.
 */
 Dio_LevelType Dio_ReadChannel(Dio_ChannelType ChannelId);
 

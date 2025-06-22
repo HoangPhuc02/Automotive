@@ -1,29 +1,32 @@
-/**********************************************************
- * @file    Port_cfg.h
- * @brief   Port Driver Configuration Header File
- * @details File này chứa các định nghĩa cấu hình các chân Port 
- *          cho driver Port theo chuẩn AUTOSAR, dùng trên 
- *          STM32F103 với thư viện SPL.
- *
- * @version 1.0
- * @date    2024-06-19
- * @author  HALA Academy
- **********************************************************/
+/***************************************************************************************
+*                                   PORT_CFG.H                                        *
+****************************************************************************************
+* File Name   : Port_cfg.h
+* Module      : Port Driver 
+* Description : Port Driver Configuration Header File
+* Details     : File configures the GPIO pins for the Port Driver
+*               according to AUTOSAR standards, designed for STM32F103
+*               using the Standard Peripheral Library (SPL).
+*
+* Version     : 1.0.0
+* Date        : 20/06/2025
+* Author      : hoangphuc540202@gmail.com
+* Github      : https://github.com/HoangPhuc02
+ **************************************************************************************/
 
 #ifndef PORT_CFG_H
 #define PORT_CFG_H
 
-#include "Port.h"   /* Bao gồm các kiểu dữ liệu chuẩn của Port Driver */
+#include "Port.h"   
 
 /**********************************************************
- * Số lượng chân Port được cấu hình (tùy chỉnh theo dự án)
+ * NUMBER OF PINS CONFIGURED
  **********************************************************/
 #define PortCfg_PinsCount    4U
 
 /**********************************************************
- * Mảng cấu hình chi tiết cho từng chân GPIO
- * (khai báo extern, định nghĩa cụ thể ở port_cfg.c)
+ * ARRAY OF PIN CONFIGURATIONS
  **********************************************************/
 extern const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount];
-
+extern const Port_ConfigType PortCfg_Port; 
 #endif /* PORT_CFG_H */

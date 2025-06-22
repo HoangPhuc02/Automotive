@@ -1,9 +1,22 @@
+/**********************************************************
+* File Name   : main 
+* Description : Main Source File
+* Details     : Main file implementation.
+* Version     : 1.0.0
+* Date        : 20/06/2025
+* Author      : hoangphuc540202@gmail.com
+* Github      : https://github.com/HoangPhuc02
+ **********************************************************/
+
 #include "stm32f10x.h"
 #include "stm32f10x_rcc.h"
 #include "stm32f10x_gpio.h"
 #include "stm32f10x_tim.h"
 #include "Dio.h"
+#include "Port.h"
 
+
+extern const Port_ConfigType PortCfg_Port; 
 void delay(uint16_t time)
 {
     TIM_SetCounter(TIM2, 0);
@@ -16,11 +29,6 @@ int main()
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
-    GPIO_InitTypeDef gpio;
-    gpio.GPIO_Pin = GPIO_Pin_13;
-    gpio.GPIO_Mode = GPIO_Mode_Out_PP;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(GPIOC, &gpio);
 
     TIM_TimeBaseInitTypeDef tim;
     tim.TIM_ClockDivision = TIM_CKD_DIV1;
@@ -30,9 +38,10 @@ int main()
     TIM_TimeBaseInit(TIM2, &tim);
     TIM_Cmd(TIM2, ENABLE);
 
+    Port_Init(&PortCfg_Port);    
     while (1)
     {
         Dio_FlipChannel(DIO_CHANNEL_C13);
-        delay(100);
+        delay(500);
     }
 }
