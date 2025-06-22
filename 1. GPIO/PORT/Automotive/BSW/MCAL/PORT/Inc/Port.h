@@ -67,7 +67,7 @@
 #define PORT_PIN_MODE_CAN       4
 #define PORT_PIN_MODE_LIN       5
 
-/* Definition of Pull-up/Pull-down values for pin */
+
 #define PORT_PIN_PULL_NONE      0
 #define PORT_PIN_PULL_UP        1
 #define PORT_PIN_PULL_DOWN      2
@@ -119,6 +119,12 @@ typedef enum {
     PORT_PIN_OUT = 0x01    // Output 
 } Port_PinDirectionType;
 
+typedef enum {
+  PORT_PIN_SPEED_10MHZ = 1,
+  PORT_PIN_SPEED_2MHZ, 
+  PORT_PIN_SPEED_50MHZ
+} Port_PinSpeedType;
+
 /**
  * @struct Port_PinConfigType
  * @brief  Detailed configuration for each pin
@@ -129,17 +135,19 @@ typedef enum {
  *         - DirectionChangeable: 1 = Allow runtime direction change
  *         - Level: PORT_PIN_LEVEL_HIGH / PORT_PIN_LEVEL_LOW (only if output)
  *         - Pull: PORT_PIN_PULL_NONE / UP / DOWN (only if input)
+ *         - Speed: PORT_PIN_SPEED_10MHZ, PORT_PIN_SPEED_2MHZ, PORT_PIN_SPEED_50MHZ
  *         - ModeChangeable: 1 = Allow runtime mode change
  */
 typedef struct {
     Port_PortType           PortNum;            // 0=A, 1=B, 2=C, 3=D 
     Port_PinType            PinNum;             // 0..15 
-    Port_PinModeType        Mode;               // Pin mode (DIO, ADC, etc.) 
+    Port_PinModeType        Mode;               // Pin mode (DIO, ADC, etc.)
+    uint8                   ModeChangeable;      // 1 = Allow runtime mode change  
     Port_PinDirectionType   Direction;          // Initial direction 
     uint8                   DirectionChangeable; // 1 = Allow runtime direction change 
     uint8                   Level;               // PORT_PIN_LEVEL_LOW, PORT_PIN_LEVEL_HIGH
     uint8                   Pull;                // PORT_PIN_PULL_NONE, PORT_PIN_PULL_UP, PORT_PIN_PULL_DOWN
-    uint8                   ModeChangeable;      // 1 = Allow runtime mode change 
+    Port_PinSpeedType       Speed ;              // PORT_PIN_SPEED_10MHZ, PORT_PIN_SPEED_2MHZ, PORT_PIN_SPEED_50MHZ
 } Port_PinConfigType;
 
 /**

@@ -2,7 +2,7 @@
 
 # Tên file đầu ra
 TARGET = DIO
-
+BUILD_DIR = build
 
 
 # Thư mục chứa file nguồn
@@ -13,19 +13,22 @@ COMM_DIR = Automotive/Common
 CONF_DIR = Automotive/Config
 
 # Include Paths
-INCLUDES = -I$(MCAL_DIR)/Dio/Inc \
+INCLUDES = -I$(MCAL_DIR)/DIO/Inc \
            -I$(SPL_DIR)/Inc \
 		   -ICore \
            -I$(COMM_DIR)/Inc \
            -I$(CONF_DIR)
 
 # Danh sách file nguồn
-DIO_SOURCES = $(wildcard $(MCAL_DIR)/Dio/Src/*.c)
+DIO_SOURCES = $(wildcard $(MCAL_DIR)/DIO/Src/*.c)
+BSW_SOURCES = $(DIO_SOURCES) 
 SPL_SOURCES = $(wildcard $(SPL_DIR)/Src/*.c)
-SRCS_C  = main.c $(DIO_SOURCES) $(SPL_SOURCES) 
+SRCS_C  = main.c $(BSW_SOURCES) $(SPL_SOURCES) 
 SRCS_S  = startup_stm32f103.s
-OBJS    = $(SRCS_C:.c=.o) $(SRCS_S:.s=.o)
+# OBJS    = $(SRCS_C:.c=.o) $(SRCS_S:.s=.o)
 
+OBJS    = $(patsubst %.c,$(BUILD_DIR)/%.o,$(notdir $(SRCS_C))) \
+          $(patsubst %.s,$(BUILD_DIR)/%.o,$(notdir $(SRCS_S)))
 
 # Trình biên dịch và các flags
 CC      = arm-none-eabi-gcc
@@ -33,31 +36,54 @@ CFLAGS  = -mcpu=cortex-m3 -mthumb -O0 -g -Wall -ffreestanding -nostdlib \
 			$(INCLUDES) \
 			-DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER
 LDFLAGS = -T stm32f103.ld -nostdlib -Wl,--gc-sections
+
+# ✅ CHANGE: Create build directory
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+
 # Mục tiêu mặc định
-all: $(TARGET).bin
+all: $(BUILD_DIR)/$(TARGET).bin
 
-# Compile file C
-%.o: %.c
+# ✅ CHANGE: Compile file C into build directory
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Assemble file ASM
-%.o: %.s
+# ✅ CHANGE: Handle sources in subdirectories
+$(BUILD_DIR)/%.o: $(MCAL_DIR)/DIO/Src/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Link thành ELF
-$(TARGET).elf: $(OBJS) stm32f103.ld
+$(BUILD_DIR)/%.o: $(MCAL_DIR)/PORT/Src/%.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.o: $(SPL_DIR)/Src/%.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# ✅ CHANGE: Assemble file ASM into build directory
+$(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# ✅ CHANGE: Link thành ELF in build directory
+$(BUILD_DIR)/$(TARGET).elf: $(OBJS) stm32f103.ld
 	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) -o $@
 
-# Tạo file .bin từ .elf
-$(TARGET).bin: $(TARGET).elf
+# ✅ CHANGE: Tạo file .bin từ .elf in build directory
+$(BUILD_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET).elf
 	arm-none-eabi-objcopy -O binary $< $@
 
-# Nạp firmware vào Blue Pill (dùng file .bin)
-flash: $(TARGET).bin
-	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg -c "program $(TARGET).bin 0x08000000 verify reset exit"
+# ✅ CHANGE: Tạo file .hex từ .elf (bonus)
+$(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
+	arm-none-eabi-objcopy -O ihex $< $@
 
-# Xóa file tạm
+# ✅ CHANGE: Update flash target
+flash: $(BUILD_DIR)/$(TARGET).bin
+	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg -c "program $(BUILD_DIR)/$(TARGET).bin 0x08000000 verify reset exit"
+
+# ✅ CHANGE: Clean build directory
 clean:
-	rm -f *.o *.elf *.bin SPL/src/*.o
+	rm -rf $(BUILD_DIR)/*
 
-.PHONY: all clean flash
+# Add hex target
+hex: $(BUILD_DIR)/$(TARGET).hex
+
+.PHONY: all clean flash hex

@@ -45,7 +45,8 @@ const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount] = {
         .DirectionChangeable = 1,
         .Level = PORT_PIN_LEVEL_HIGH,
         .Pull = PORT_PIN_PULL_NONE,
-        .ModeChangeable = 1
+        .ModeChangeable = 1,
+        .Speed = PORT_PIN_SPEED_10MHZ
     },
     /* PA1: DIO, Input, Disable Change Direction & Mode runtime, pull-up */
     {
@@ -56,7 +57,8 @@ const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount] = {
         .DirectionChangeable = 0,
         .Level = PORT_PIN_LEVEL_LOW, /* Không ảnh hưởng nếu là input */
         .Pull = PORT_PIN_PULL_UP,
-        .ModeChangeable = 0
+        .ModeChangeable = 0,
+        .Speed = PORT_PIN_SPEED_10MHZ
     },
     /* PB0: DIO, Output, Disable Change Direction & Mode runtime, LOW, no pull */
     {
@@ -67,7 +69,8 @@ const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount] = {
         .DirectionChangeable = 0,
         .Level = PORT_PIN_LEVEL_LOW,
         .Pull = PORT_PIN_PULL_NONE,
-        .ModeChangeable = 0
+        .ModeChangeable = 0,
+        .Speed = PORT_PIN_SPEED_10MHZ
     },
     /* PC13: DIO, Output, Enable Change Mode runtime, no pull */
     {
@@ -78,7 +81,8 @@ const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount] = {
         .DirectionChangeable = 1,
         .Level = PORT_PIN_LEVEL_LOW,
         .Pull = PORT_PIN_PULL_DOWN,
-        .ModeChangeable = 1
+        .ModeChangeable = 1,
+        .Speed = PORT_PIN_SPEED_10MHZ
     }
    
 };

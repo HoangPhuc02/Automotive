@@ -23,25 +23,28 @@ void delay(uint16_t time)
     while (TIM_GetCounter(TIM2) < time)
         ;
 }
-
+void Timer_Init(void);
 int main()
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
-
-    TIM_TimeBaseInitTypeDef tim;
-    tim.TIM_ClockDivision = TIM_CKD_DIV1;
-    tim.TIM_CounterMode = TIM_CounterMode_Up;
-    tim.TIM_Period = 0xFFFF;
-    tim.TIM_Prescaler = 8000 - 1;
-    TIM_TimeBaseInit(TIM2, &tim);
-    TIM_Cmd(TIM2, ENABLE);
-
-    Port_Init(&PortCfg_Port);    
+    Timer_Init(); // Initialize Timer for delay
+    Port_Init(&PortCfg_Port);    // Initialize Port Driver with configuration
     while (1)
     {
         Dio_FlipChannel(DIO_CHANNEL_C13);
         delay(500);
     }
+}
+
+void Timer_Init(void)
+{
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+
+    TIM_TimeBaseInitTypeDef tim;
+    tim.TIM_ClockDivision = TIM_CKD_DIV1;
+    tim.TIM_CounterMode = TIM_CounterMode_Up;
+    tim.TIM_Period = 0xFFFF;
+    tim.TIM_Prescaler = 8000 - 1; // Prescaler for 1ms tick
+    TIM_TimeBaseInit(TIM2, &tim);
+    TIM_Cmd(TIM2, ENABLE);
 }

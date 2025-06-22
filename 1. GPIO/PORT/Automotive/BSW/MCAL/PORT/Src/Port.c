@@ -46,8 +46,9 @@ static void Port_ApplyPinConfig(const Port_PinConfigType* pinCfg);
 static void Port_SetModeDIO(const Port_PinConfigType* pinCfg, uint16_t pinMask) {
     GPIO_InitTypeDef GPIO_InitStruct;
 
+    GPIO_TypeDef* GPIO_Port = PORT_GET_PORT(pinCfg->PortNum);
     GPIO_InitStruct.GPIO_Pin = pinMask;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_InitStruct.GPIO_Speed = pinCfg->Speed;
 
    
     if (pinCfg->Direction == PORT_PIN_OUT) {
@@ -55,13 +56,15 @@ static void Port_SetModeDIO(const Port_PinConfigType* pinCfg, uint16_t pinMask) 
     } else {
         if (pinCfg->Pull == PORT_PIN_PULL_UP)
             GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;
+
         else if (pinCfg->Pull == PORT_PIN_PULL_DOWN)
             GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPD;
+
         else
             GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     }
 
-    GPIO_Init((PORT_GET_PORT(pinCfg->PortNum)), &GPIO_InitStruct);
+    GPIO_Init(GPIO_Port, &GPIO_InitStruct);
 
     /* Nếu là output, set level ban đầu */
     if (pinCfg->Direction == PORT_PIN_OUT) {
