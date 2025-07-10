@@ -19,7 +19,23 @@
 #include "Port.h"
 #include "Adc.h"
 #include "Adc_Types.h"
+#include "Adc_Cfg.h"
 
+uint16 buffer[200];
+extern const Port_ConfigType PortCfg_Port; 
+extern const Adc_ConfigType Adc_Config;
+void Adc_Group1_Notification(void)
+{
+    Adc_ReadGroup(Adc_Config.Groups[0].Adc_GroupId, &buffer[0]);
+}
+void Adc_Group2_Notification(void)
+{
+    Adc_ReadGroup(Adc_Config.Groups[1].Adc_GroupId, &buffer[10]);
+}
+void Adc_Group3_Notification(void)
+{
+    Adc_ReadGroup(Adc_Config.Groups[2].Adc_GroupId, &buffer[20]);
+}
 // ADC channel
 typedef enum 
 {
@@ -47,33 +63,26 @@ void delay(uint16_t time)
     while (TIM_GetCounter(TIM2) < time)
         ;
 }
-extern const Port_ConfigType PortCfg_Port; 
-extern Adc_ConfigType Adc_Config;
-void Timer_Init(void);
 
+
+
+void Timer_Init(void);
 int main()
 {
     // Initialize the hardware
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
     Timer_Init();
     Port_Init(&PortCfg_Port);
     Adc_Init(&Adc_Config);
+    Adc_StartGroupConversion(Adc_Config.Groups[0].Adc_GroupId);
+    // Adc_StartGroupConversion(Adc_Config.Groups[1].Adc_GroupId);
+    // Adc_StartGroupConversion(Adc_Config.Groups[2].Adc_GroupId);
+    Adc_GroupType i = 0;
     while (1)
     {
         // Start ADC conversion
-        Adc_StartGroupConversion(Adc_Config.Groups[0].Adc_GroupId);
-
+        
+        Adc_MainFunction();
         // Wait for conversion to complete
-        while (!Adc_GetGroupStatus(Adc_Config.Groups[0].Adc_GroupId));
-
-        // Read ADC value
-        Adc_ValueGroupType adcValue[2];
-        Adc_ReadGroup(Adc_Config.Groups[0].Adc_GroupId, adcValue);
-
         // Do something with adcValue
         delay(500); // Delay for 500ms
     }

@@ -4,7 +4,7 @@
 * File Name   : Adc.h
 * Module      : Analog to Digital Converter (ADC)
 * Description : AUTOSAR ADC driver header file 
-* Version     : 1.0.0
+* Version     : 2.0.0
 * Date        : 24/06/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
@@ -98,8 +98,8 @@
 /****************************************************************************************
 *                              GLOBAL VARIABLES                                        *
 ****************************************************************************************/
-
-
+extern const Adc_HwUnitType Adc_HwUnitConfig[NUM_OF_ADC_HW_UNITS];
+extern Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS];
 /****************************************************************************************
 *                              FUNCTION PROTOTYPES                                     *
 ****************************************************************************************/
@@ -174,7 +174,7 @@ void Adc_StopGroupConversion (Adc_GroupType Group);
 /**
  * @brief Reads the group conversion result of the last completed conversion round of the requested
  group and stores the channel values starting at the DataBufferPtr address. The group channel
- values are stored in ascending channel number order (in contrast to the storage layout of the
+ values are stored in ascending channel number order ( in contrast to the storage layout of the
  result buffer if streaming access is configured).
  * 
  * @param[in]   Group: Numeric ID of requested ADC channel group
@@ -328,27 +328,6 @@ Std_ReturnType Adc_GetTargetPowerState( Adc_PowerStateType* TargetPowerState,
  */
 Std_ReturnType Adc_PreparePowerState( Adc_PowerStateType PowerState,
                                      Adc_PowerStateRequestResultType* Result);
-
-/****************************************************************************************
-*                         DEFERRED PROCESSING FUNCTIONS                                *
-****************************************************************************************/
-/**
- * @brief Main function for deferred ADC processing
- * @details This function should be called periodically from the main loop 
- *          to handle ADC interrupt processing that was deferred from ISR context
- * @note    Call frequency should be high enough to prevent buffer overflow
- *          but can be lower priority than the ISR itself
- */
-void AdcHw_MainFunction(void);
-
-/**
- * @brief Fast interrupt handler with minimal processing
- * @param Unit ADC hardware unit that triggered the interrupt
- * @details This is the actual ISR that should be called from interrupt vectors.
- *          It performs only critical time-sensitive operations and defers 
- *          complex processing to AdcHw_MainFunction()
- */
-void AdcHw_Interrupt_Handler(Adc_HwUnitType Unit);
 
 
 

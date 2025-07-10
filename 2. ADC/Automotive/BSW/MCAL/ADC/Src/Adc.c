@@ -4,7 +4,7 @@
 * File Name   : Adc.c
 * Module      : Analog to Digital Converter (ADC)
 * Description : AUTOSAR ADC driver source file 
-* Version     : 1.0.0
+* Version     : 2.0.0 - Redesigned for clarity and maintainability
 * Date        : 24/06/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
@@ -15,590 +15,857 @@
 ****************************************************************************************/
 #include "Adc.h"
 #include "Adc_Cfg.h"
+#include "Adc_Hw.h"
 #include "Adc_Types.h"
 #include "stm32f10x_adc.h"
-#include "misc.h"   // For NVIC configuration
-/* Include error detection module if enabled */
-/* Include other required headers */
+#include "misc.h"
+
+/* Include error detection if enabled */
+#if (ADC_DEV_ERROR_DETECT == STD_ON)
+#include "Det.h"
+#endif
 
 /****************************************************************************************
 *                                 GLOBAL VARIABLES                                     *
 ****************************************************************************************/
-/* ADC Driver State Variable */
-/* ADC Group Status Variables */
-/* ADC Notification Status Variables */
-/* ADC Configuration Pointer */
-/* ADC Power State Variables */
-static Adc_ConfigType* Adc_ConfigPtr = NULL_PTR; // Pointer to the current ADC configuration
-/*******************************************************************************
-* Core ADC Functions
-*******************************************************************************/
+/* Driver state */
+static Adc_DriverStateType Adc_DriverState = ADC_DRIVER_STATE_UNINIT;
+/**
+ * @brief   Get current driver state
+ * @return  Current driver state
+ */
+inline Adc_DriverStateType Adc_GetDriverState(void)
+{
+    return Adc_DriverState;
+}
 
-/* Adc_Init function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
+/* Configuration pointer */
+static const Adc_ConfigType* Adc_ConfigPtr = NULL_PTR;
+
+/* Runtime data arrays */
+/* Update to private only can be controlled by ADC_HW*/
+// Adc_RuntimeGroupType Adc_RuntimeGroups[ADC_MAX_GROUPS];
+// Adc_RuntimeHwUnitType Adc_RuntimeHwUnits[ADC_MAX_HW_UNITS];
+
+/* Result buffers */
+Adc_ValueGroupType Adc_ResultBuffer[ADC_MAX_GROUPS][ADC_MAX_BUFFER_SIZE];
+
+/* Performance counters */
+#if (ADC_ENABLE_DEBUG_SUPPORT == STD_ON)
+Adc_PerformanceCountersType Adc_PerformanceCounters;
+#endif
+
+/****************************************************************************************
+*                                 STATIC FUNCTION PROTOTYPES                          *
+****************************************************************************************/
+static Std_ReturnType Adc_ValidateInit(uint8 ApiId);
+static Std_ReturnType Adc_ValidateGroup(Adc_GroupType Group, uint8 ApiId);
+static Std_ReturnType Adc_ValidatePointer(const void* Ptr, uint8 ApiId);
+static void Adc_InitializeRuntimeData(void);
+static void Adc_ResetRuntimeData(void);
+static Std_ReturnType Adc_ValidateGroupForStart(Adc_GroupType Group);
+static Std_ReturnType Adc_ValidateGroupForStop(Adc_GroupType Group);
+static void Adc_HandleGroupCompletion(Adc_GroupType Group);
+static void Adc_UpdateGroupStatus(Adc_GroupType Group, Adc_StatusType NewStatus);
+
+/****************************************************************************************
+*                                 INITIALIZATION FUNCTIONS                            *
+****************************************************************************************/
+/**
+ * @brief   Initializes the ADC hardware units and driver
+ * @param[in] ConfigPtr Pointer to configuration set
+ * @return  void
+ * @reqs    SWS_Adc_00365
+ */
 void Adc_Init(const Adc_ConfigType* ConfigPtr)
 {
-/*
- * Implementation Note for Adc_Init:
- *
- * 1. Error Handling:
- *    - Check if ADC driver is already initialized
- *    - If yes, report ADC_E_ALREADY_INITIALIZED and return
- *    - Validate ConfigPtr (not NULL)
- *
- * 2. Initialization Steps:
- *    - Store configuration pointer for later use
- *    - Initialize ADC state variables
- *    - Set all ADC groups to ADC_IDLE state
- *    - Disable all notifications
- *    - Disable hardware triggers if configured as active
- *
- * 3. Hardware Configuration:
- *    - Only initialize registers specific to ADC functionality
- *    - Don't touch I/O registers (PORT driver's responsibility)
- *    - Don't modify registers that affect multiple modules (MCU driver's responsibility)
- *    - Follow hardware-specific initialization sequence
- *    - Only configure resources specified in ConfigPtr
- *
- * 4. Completion:
- *    - Set driver state to initialized
- *    - Apply power management settings if configured
- */
-// init AdcHw_CurrGroupId status
-
-    if(ConfigPtr == NULL_PTR)
+    /* Development error detection */
+    if (Adc_DriverState != ADC_DRIVER_STATE_UNINIT)
     {
-        // Report error: ADC_E_PARAM_CONFIG
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_INIT_ID, ADC_E_ALREADY_INITIALIZED);
+        #endif
         return;
     }
-    if(ConfigPtr->Initialized == 1)
+    
+    if (ConfigPtr == NULL_PTR)
     {
-        // Report error: ADC_E_ALREADY_INITIALIZED
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_INIT_ID, ADC_E_PARAM_CONFIG);
+        #endif
         return;
     }
-    Adc_ConfigPtr = (Adc_ConfigType*)ConfigPtr; // Store the configuration pointer
-    Adc_HwUnitDefType* AdcHwUnitConfig = Adc_ConfigPtr->HwUnits;
-    Adc_GroupDefType* AdcGroupConfig = Adc_ConfigPtr->Groups;
-    for(uint8 i = 0; i < Adc_ConfigPtr->NumHwUnits; i++)
+    
+    /* Store configuration pointer */
+    Adc_ConfigPtr = ConfigPtr;
+    
+    /* Initialize runtime data */
+    Adc_InitializeRuntimeData();
+    
+    /* Initialize hardware units */
+    for (uint8 i = 0; i < ConfigPtr->NumHwUnits; i++)
     {
-        AdcHwUnitConfig[i].AdcHw_CurrGroupRegisterId = 0; // this will give id of the group in queue will be work next
-        AdcHwUnitConfig[i].AdcHw_NbrOfGroupRegister = 0; // number of group are in the list
-        AdcHwUnitConfig[i].AdcHW_Nvic = ADC_HW_EOC;
-    }
-    for(uint8 i = 0; i < Adc_ConfigPtr->NumGroups; i++)
-    {
-        AdcGroupConfig[i].Adc_Status = ADC_IDLE; //Idle by default
-        AdcGroupConfig[i].Adc_GroupReplacement = 0; // Disable Group Replacement by default
-        AdcGroupConfig[i].Adc_SamplesResultCounter = 0;
-        AdcGroupConfig[i].Adc_ChannelConversionId = 0;
-        AdcGroupConfig[i].Adc_NotificationEnable = ADC_NOTIFICATION_DISABLE; // No buffer set by default
-    }
-    Adc_ConfigPtr->Initialized = 1; // Mark the ADC as initialized
-}
-
-Std_ReturnType Adc_SetupResultBuffer (Adc_GroupType Group,
-                                      Adc_ValueGroupType* DataBufferPtr)
-{
-/**
- * @brief Sets up the result buffer for an ADC channel group
- *
- * Implementation notes:
- * 1. This function should initialize the result buffer pointer of the selected group
- *    with the address passed as parameter.
- * 2. Implementation must include the following error checks (if DET is enabled):
- *    - ADC_E_UNINIT: Check if ADC driver is initialized
- *    - ADC_E_PARAM_GROUP: Validate that the group ID exists
- *    - ADC_E_PARAM_POINTER: Verify DataBufferPtr is not NULL
- *    - ADC_E_BUSY: Check if group is in ADC_IDLE state, report runtime error otherwise
- * 
- * 3. External considerations (for environment code):
- *    - Ensure no group conversions start without buffer initialization
- *    - The buffer size must be adequate to hold all channel conversion results
- *    - For streaming access, buffer must accommodate multiple sets of results
- *      as specified by the streaming sample parameter
- * 
- * @param[in] Group ID of ADC channel group
- * @param[in] DataBufferPtr Pointer to result buffer
- * @return Std_ReturnType E_OK: Operation completed successfully
- *                        E_NOT_OK: Operation failed
- */
-    Std_ReturnType retVal = E_NOT_OK;
-    // check king errors 
-    if(Group >= ADC_MAX_GROUPS)
-    {
-        // Report error: ADC_E_PARAM_GROUP
-        retVal = E_NOT_OK;
-    }
-    else if(Adc_GroupConfig[Group].Adc_Status != ADC_IDLE)
-    {
-        // Report error: ADC_E_BUSY
-        retVal = E_NOT_OK;
-    }
-    else if(DataBufferPtr == NULL_PTR)
-    {
-        // Report error: ADC_E_PARAM_POINTER
-        retVal = E_NOT_OK;
-    }
-    else
-    {
-        // Set the result buffer pointer for the group
-        Adc_GroupConfig[Group].Adc_ValueResultPtr = DataBufferPtr;
-        retVal = E_OK; // Operation successful
-    }
-    return retVal;
-
-}
-/* Adc_DeInit function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
-void Adc_DeInit(void)
-{
-    // Check if the ADC driver is initialized
-    if (Adc_ConfigPtr == NULL_PTR)
-    {
-        // Report error: ADC_E_UNINIT
-        return;
-    }
-
-    // Check if all groups are in IDLE or STREAM_COMPLETED state
-    for (uint8 i = 0; i < ADC_MAX_GROUPS; i++)
-    {
-        if (Adc_GroupConfig[i].Adc_Status != ADC_IDLE && 
-            Adc_GroupConfig[i].Adc_Status != ADC_STREAM_COMPLETED)
+        if (AdcHw_Init(i) != E_OK)
         {
-            // Report runtime error: ADC_E_BUSY
+            #if (ADC_DEV_ERROR_DETECT == STD_ON)
+            Det_ReportError(ADC_MODULE_ID, 0, ADC_INIT_ID, ADC_E_HW_FAILURE);
+            #endif
+            /* Reset driver state on failure */
+            Adc_DriverState = ADC_DRIVER_STATE_UNINIT;
             return;
         }
     }
-
-    // Reset all hardware units to power-on state
-    for (Adc_GroupType i = 0; i < Adc_ConfigPtr->NumHwUnits; i++)
-    {
-        ADC_TypeDef* ADCx = ADC_GET_HW_MODULE_ID(i);
     
-        
-        // Reset ADC registers
-        ADC_DeInit(ADCx);
-        
-        // Disable ADC interrupts
-        if(Adc_HwUnitConfig[i].AdcHw_DMAAvailable == 1)
-        {
-            DMA_Channel_TypeDef* DMAx = ADC_GET_HW_DMA_ID(i);
-            AdcHw_DMADisable(ADCx, DMAx);
-            AdcHw_DMADeInit(ADCx);
-            AdcHw_NVICEnableDMA(ADCx);
-        }
-        AdcHw_NVICDisableInterrupt(ADCx);
-        
-        // Reset internal status variables
-        Adc_HwUnitConfig[i].AdcHw_CurrGroupRegisterId = 0;
-        Adc_HwUnitConfig[i].AdcHw_NbrOfGroupRegister = 0;
-        Adc_HwUnitConfig[i].AdcHW_Nvic = ADC_HW_EOC;
-    }
+    /* Initialize performance counters */
+    #if (ADC_ENABLE_DEBUG_SUPPORT == STD_ON)
+    memset(&Adc_PerformanceCounters, 0, sizeof(Adc_PerformanceCountersType));
+    #endif
+    
+    /* Set driver state to initialized */
+    Adc_DriverState = ADC_DRIVER_STATE_INITIALIZED;
+}
 
-    // Reset all group configurations to default
-    for (uint8 i = 0; i < Adc_ConfigPtr->NumGroups; i++)
+/**
+ * @brief   Returns all ADC HW Units to power-on reset state
+ * @return  void
+ * @reqs    SWS_Adc_00366
+ */
+void Adc_DeInit(void)
+{
+    /* Validate driver state */
+    if (Adc_ValidateInit(ADC_DEINIT_ID) != E_OK)
     {
-        Adc_GroupConfig[i].Adc_Status = ADC_IDLE;
-        Adc_GroupConfig[i].Adc_GroupReplacement = 0;
-        Adc_GroupConfig[i].Adc_SamplesResultCounter = 0;
-        Adc_GroupConfig[i].Adc_ChannelConversionId = 0;
-        Adc_GroupConfig[i].Adc_NotificationEnable = ADC_NOTIFICATION_DISABLE;
-        Adc_GroupConfig[i].Adc_ValueResultPtr = NULL_PTR;
+        return;
     }
-
-    // Set driver to uninitialized state
+    
+    /* Check if all groups are idle */
+    for (Adc_GroupType i = 0; i < ADC_MAX_GROUPS; i++)
+    {
+        if ((AdcHw_GetGroupRuntimeStatus(i) != ADC_IDLE) && \
+            (AdcHw_GetGroupRuntimeStatus(i) != ADC_STREAM_COMPLETED))
+        {
+            #if (ADC_DEV_ERROR_DETECT == STD_ON)
+            Det_ReportError(ADC_MODULE_ID, 0, ADC_DEINIT_ID, ADC_E_BUSY);
+            #endif
+            return;
+        }
+    }
+    
+    /* Deinitialize hardware units */
+    for (uint8 i = 0; i < Adc_ConfigPtr->NumHwUnits; i++)
+    {
+        AdcHw_DeInit(i);
+    }
+    
+    /* Reset runtime data */
+    Adc_ResetRuntimeData();
+    
+    /* Reset driver state */
+    Adc_DriverState = ADC_DRIVER_STATE_UNINIT;
     Adc_ConfigPtr = NULL_PTR;
 }
 
-/* Adc_StartGroupConversion function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
-void Adc_StartGroupConversion (Adc_GroupType Group)
+/**
+ * @brief   Sets up the result buffer for ADC group conversions
+ * @param[in] Group Numeric ID of requested ADC channel group
+ * @param[in] DataBufferPtr Pointer to result buffer
+ * @return  E_OK if successful, E_NOT_OK otherwise
+ * @reqs    SWS_Adc_91000
+ */
+Std_ReturnType Adc_SetupResultBuffer(Adc_GroupType Group,
+                                     Adc_ValueGroupType* DataBufferPtr)
 {
+    /* Validate parameters */
+    if (Adc_ValidateInit(ADC_SETUP_RESULT_BUFFER_ID) != E_OK)
+    {
+        return E_NOT_OK;
+    }
     
-    if (Group >= ADC_MAX_GROUPS)
+    if (Adc_ValidateGroup(Group, ADC_SETUP_RESULT_BUFFER_ID) != E_OK)
     {
-        // Report error: ADC_E_PARAM_GROUP
-        return;
-    }
-    Adc_GroupDefType* ADCGroup = &Adc_GroupConfig[Group];
-    Adc_HwUnitDefType* ADCHwUnit = &Adc_HwUnitConfig[ADCGroup->Adc_HwUnitId];
-    if(ADCHwUnit->AdcHw_HWTrigger == 1 || ADCGroup->Adc_Status != ADC_IDLE)
-    {
-        // Report error: ADC_E_BUSY
-        return;
-    }
-    else if(ADCGroup->Adc_TriggerSource == ADC_TRIGG_SRC_HW )
-    {
-        // Report error: ADC_E_WRONG_TRIGG_SRC
-        return;
-    }
-    ADC_TypeDef* ADCx = ADC_GET_HW_MODULE_ID(ADCGroup->Adc_HwUnitId);
-
-    if(ADCHwUnit->AdcHw_PriorityEnable != ADC_PRIORITY_NONE) // priority enable not care queue
-    {
-        /* GroupConversion shall report a runtime error ADC_E_BUSY. ()
-        Note: The condition that the group is not in state ADC_IDLE means in this context:
-        The conversion of the same group is currently ongoing
-        or
-        A conversion request for the same group is already stored one time in the queue*/
-        /* If the priority mechanism is enabled: when called while a group,
-        which can be implicitly stopped, is not in state ADC_IDLE and not in state ADC_
-        STREAM_COMPLETED, the function Adc_StartGroupConversion shall report a run
-        time error ADC_E_BUSY. */
-    }
-    else if(ADCHwUnit->AdcHw_QueueEnable == 1 ) //queue enabled, priority disabled
-    {
-        // There is a conversion working
-        if(AdcHw_RegisterGroupQueue(ADCHwUnit, Group) == E_NOT_OK)
-        {
-            // Report error: ADC_E_BUSY
-            return;
-        }
-    }
-
-    else if(ADCHwUnit->AdcHw_QueueEnable == 0 ) //queue disabled, priority disabled
-        // if group in queue 
-        // check queue 0 to get current thing 
-    {
-        if(AdcHw_RegisterGroupQueue(ADCHwUnit, Group) == E_NOT_OK)
-        {
-            // Report error: ADC_E_BUSY
-            // conversion is ongoing
-            // hw trigger is enable
-            return;
-        }
-    }
-    // Reset result buffer
-    /* To go to this line it alreaty make sure that there are no conversion is ongoing or the queue is empty if enable*/
-    AdcHw_ConfigSWConversion(ADCGroup->Adc_HwUnitId, Group);
-}
-/* SWS_Adc_00346 Note:
- * -----------------------------
- * When both priority mechanism and queuing are disabled: or enabled,
- * 
- * Adc_StartGroupConversion must return ADC_E_BUSY error if:
- * 1. Any group that can't be implicitly stopped is currently busy (converting)
- *    OR
- * 2. Any group that can't be implicitly stopped has HW trigger enabled
- * 
- * This prevents conflicts when multiple groups try to use the same ADC hardware
- * simultaneously without any arbitration mechanism (priority/queuing) in place.
- * 
- * Implementation must check all groups on the same hardware unit before
- * starting a new conversion.
- */
-/* Implementation Guide for SWS_Adc_00426:
- * --------------------------------------
- * 1. In Adc_StartGroupConversion():
- *    - Get the hardware unit of the group to be started
- *    - Loop through all configured groups
- *    - For each group using the same HW unit:
- *      a. Check if it CAN be implicitly stopped using these criteria:
- *         - SW triggered + one-shot mode + single access mode OR
- *         - SW triggered + continuous mode + linear streaming mode OR
- *         - HW triggered + one-shot mode + linear streaming mode
- *      b. If it CAN be implicitly stopped, check if it's:
- *         - NOT in IDLE state AND
- *         - NOT in STREAM_COMPLETED state
- *      c. If conditions a+b are true, report ADC_E_BUSY and return E_NOT_OK
- * 
- * 2. Helper function to determine if a group can be implicitly stopped:
- *    bool Adc_GroupCanBeImplicitlyStopped(Adc_GroupType Group) {
- *      const Adc_GroupConfigType *config = &Adc_ConfigPtr->groupConfigPtr[Group];
- *      
- *      // Case 1: SW triggered + one-shot + single access
- *      if (config->AdcGroupTriggerSource == ADC_TRIGGER_SRC_SW &&
- *          config->AdcGroupConversionMode == ADC_GROUP_CONV_MODE_ONESHOT &&
- *          config->AdcGroupAccessMode == ADC_ACCESS_MODE_SINGLE) {
- *          return TRUE;
- *      }
- *      
- *      // Case 2: SW triggered + continuous + linear streaming
- *      if (config->AdcGroupTriggerSource == ADC_TRIGGER_SRC_SW &&
- *          config->AdcGroupConversionMode == ADC_GROUP_CONV_MODE_CONTINUOUS &&
- *          config->AdcGroupAccessMode == ADC_ACCESS_MODE_STREAMING &&
- *          config->AdcStreamBufferMode == ADC_STREAM_BUFFER_LINEAR) {
- *          return TRUE;
- *      }
- *      
- *      // Case 3: HW triggered + one-shot + linear streaming
- *      if (config->AdcGroupTriggerSource != ADC_TRIGGER_SRC_SW &&
- *          config->AdcGroupConversionMode == ADC_GROUP_CONV_MODE_ONESHOT &&
- *          config->AdcGroupAccessMode == ADC_ACCESS_MODE_STREAMING &&
- *          config->AdcStreamBufferMode == ADC_STREAM_BUFFER_LINEAR) {
- *          return TRUE;
- *      }
- *      
- *      return FALSE;
- *    }
- * 
- * 3. This check should be performed separately from SWS_Adc_00346, as they
- *    apply to different types of groups (can vs. cannot be implicitly stopped).
- *    
- * 4. The check should only be performed when both ADC_PRIORITY_IMPLEMENTATION 
- *    is set to ADC_PRIORITY_NONE and ADC_ENABLE_QUEUING is STD_OFF.
- */
-
-// priority enabled: group can be implicity stopped, group state is not ADC_IDLE report ADC_E_BUSY
-// note group not in ADC_IDLE mean : this conversion is currently ongoing or a conversion request is still pending
-
-// priority enabled or priority disabled, queue enable not in ADC_IDLE nor ADC_STREAM_COMPLETED state report ADC_E_BUSY
-
-
-
-//
-
-
-void Adc_StopGroupConversion (Adc_GroupType Group)
-{
-    if (Group >= ADC_MAX_GROUPS)
-    {
-        // Report error: ADC_E_PARAM_GROUP
-        return;
-    }
-    Adc_GroupDefType* ADCGroup = &Adc_GroupConfig[Group];
-
-    if (ADCGroup == NULL_PTR)
-    {
-        // Report error: ADC_E_PARAM_GROUP
-        return;
-    }
-    else if (ADCGroup->Adc_Status == ADC_IDLE || \
-        ADCGroup->Adc_Status == ADC_STREAM_COMPLETED)
-    {
-        // Report error: ADC_E_IDLE
-        return;
-    }
-    else if(ADCGroup->Adc_TriggerSource == ADC_TRIGG_SRC_HW )
-    {
-        // Report error: ADC_E_WRONG_TRIGG_SRC
-        return;
-    }
-    // Stop the conversion process for the group
-    ADCGroup->Adc_Status = ADC_IDLE; // Set group status to idle
-    ADC_TypeDef* ADCx = ADC_GET_HW_MODULE_ID(ADCGroup->Adc_HwUnitId);
-    Adc_HwUnitDefType* ADCHwUnit = &Adc_HwUnitConfig[ADCGroup->Adc_HwUnitId];
-
-    // delete from register entry
-    if(ADCGroup->Adc_GroupConvMode == ADC_CONV_MODE_CONTINUOUS 
-        || ADCGroup->Adc_GroupConvMode == ADC_CONV_MODE_ONESHOT) // there are a group is activity add to queue list
-    {
-        AdcHw_SwStopConv(ADCx); // Stop the software conversion process
-        AdcHw_RemoveGroupQueue(ADCHwUnit, Group);
-    }
-     
-}
-Std_ReturnType Adc_ReadGroup (Adc_GroupType Group,\
-                               Adc_ValueGroupType* DataBufferPtr)
-{
-    if (Group >= ADC_MAX_GROUPS)
-    {
-        // Report error: ADC_E_PARAM_GROUP
         return E_NOT_OK;
     }
-    Adc_GroupDefType* ADCGroup = &Adc_GroupConfig[Group];
+    
+    if (Adc_ValidatePointer(DataBufferPtr, ADC_SETUP_RESULT_BUFFER_ID) != E_OK)
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Check if group is idle */
+    if (AdcHw_GetGroupRuntimeStatus(Group) != ADC_IDLE)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_SETUP_RESULT_BUFFER_ID, ADC_E_BUSY);
+        #endif
+        return E_NOT_OK;
+    }
 
-    if (ADCGroup == NULL_PTR)
+    /* Set up result buffer */
+    // reset buffer
+    for(uint16 i; i < Adc_GroupConfig[Group].Adc_ValueResultSize; i++)
     {
-        // Report error: ADC_E_PARAM_GROUP
-        return E_NOT_OK;
-    }
-    else if (ADCGroup->Adc_Status ==  ADC_COMPLETED)
-    {
-        // Report error: ADC_E_BUSY
-        return E_NOT_OK;
-    }
-    else if (ADCGroup->Adc_Status == ADC_IDLE)
-    {
-        // Report error: ADC_E_IDLE
-        return E_NOT_OK;
-    }
-    if(ADCGroup->Adc_TriggerSource == ADC_TRIGG_SRC_SW)
-    {
-        Adc_StopGroupConversion(Group);
-    }
-    else 
-    {
-        /** Stop HW conversion is not supported for now */
-    }
-    /**
-     * @brief Read group implementation 
-     * @reqs : [SWS_Adc_00329] [SWS_Adc_00330] 
-     * State transition handling:
-     * - When group status is ADC_STREAM_COMPLETED:
-     *   1. For continuous conversion modes (single access or circular streaming buffer)
-     *      and hardware triggered groups in single/circular streaming access mode:
-     *      State transitions to ADC_BUSY [SWS_Adc_00329]
-     *
-     *   2. For software triggered conversions that auto-stop (streaming with linear access
-     *      or one-shot with single access) and hardware triggered conversions with linear
-     *      streaming access: State transitions to ADC_IDLE [SWS_Adc_00330]
-     */
-
-    Adc_ChannelType Channels = ADCGroup->Adc_NbrOfChannel;
-    Adc_StreamNumSampleType Samples = ADCGroup->Adc_StreamNumSamples;
-    Adc_StreamNumSampleType LastConvIndex = ADCGroup->Adc_SamplesResultCounter - 1;
-    for(uint8 i = 0; i < Channels ; i++)
-    {
-        // Read the conversion result for each channel in the group
-        // This may involve reading from hardware registers or buffers
-        // Ensure to handle the data correctly based on the group configuration
-        DataBufferPtr[i] = ADCGroup->Adc_ValueResultPtr[LastConvIndex * Channels + i];
+        Adc_GroupConfig[Group].Adc_ValueResultPtr[i] = 0;
     }
     return E_OK;
 }
 
+/****************************************************************************************
+*                                 CONVERSION CONTROL FUNCTIONS                        *
+****************************************************************************************/
 /**
- * @brief  Enables the hardware trigger for the requested ADC Channel group
- * @param[in] Group: Numeric ID of the ADC channel group
+ * @brief   Starts conversion of all channels in the requested ADC group
+ * @param[in] Group Numeric ID of the ADC channel group
  * @return  void
- * @reqs   SWS_Adc_91001
+ * @reqs    SWS_Adc_00508
  */
-void Adc_EnableHardwareTrigger (Adc_GroupType Group)
+void Adc_StartGroupConversion(Adc_GroupType Group)
 {
-    /* This API is not work for now*/
-}
-
-
-void Adc_DisableHardwareTrigger (Adc_GroupType Group)
-{
-    /* This API is not work for now*/
-}
-
-
-
-void Adc_EnableGroupNotification (Adc_GroupType Group)
-{
-    /* This API is not work for now*/
-    /* Todo Enable NVIC */
-    /* Handle Streaming Conversion*/
-}
-
-
-void Adc_DisableGroupNotification (Adc_GroupType Group)
-{
-    /* This API is not work for now*/
-    /* Todo Disable NVIC */
-}
-
-
-
-Adc_StreamNumSampleType Adc_GetStreamLastPointer (Adc_GroupType Group,
-                                                  Adc_ValueGroupType** PtrToSamplePtr)
-{
-    return 1; // This function is not implemented yet
-}
-
-/* Adc_StopGroupConversion function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
-
-/* Adc_ReadGroup function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
-
-/* Adc_EnableGroupNotification function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
-
-/* Adc_DisableGroupNotification function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
-
-/* Adc_GetGroupStatus function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
-Adc_StatusType Adc_GetGroupStatus (Adc_GroupType Group)
-{
-    if (Group >= ADC_MAX_GROUPS)
+    /* Validate parameters */
+    ADC_VALIDATE_INIT(ADC_START_GROUP_CONVERSION_ID);
+    ADC_VALIDATE_GROUP(Group, ADC_START_GROUP_CONVERSION_ID);
+    
+    /* Validate group for start */
+    if (Adc_ValidateGroupForStart(Group) != E_OK)
     {
-        // Report error: ADC_E_PARAM_GROUP
-        return 255;
+        return;
     }
-    Adc_GroupDefType* ADCGroup = &Adc_GroupConfig[Group];
 
-    if (ADCGroup == NULL_PTR)
+    // TODO fix this code to not allow hw source config
+    /* Get group configuration */
+    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    Adc_HwUnitType HwUnit = GroupConfig->Adc_HwUnitId;
+    if (GroupConfig->Adc_TriggerSource == ADC_TRIGG_SRC_HW)
     {
-        // Report error: ADC_E_PARAM_GROUP
-        return 255;
+        return;
     }
-    return ADCGroup->Adc_Status; // Return the current status of the group
+    /* Start conversion based on configuration */
+
+    /* Software triggered conversion */
+    if (AdcHw_StartSwConversion(HwUnit, Group) == E_OK)
+    {
+        Adc_UpdateGroupStatus(Group, ADC_BUSY);
+    }
+    
 }
-/*******************************************************************************
-* Power Management Functions
-*******************************************************************************/
 
-// /* Adc_SetPowerState function implementation */
-// Std_ReturnType Adc_SetPowerState (Adc_PowerStateRequestResultType* Result)
-// {
-//     /* This API is not work for now*/
-// }
-// /* Adc_GetCurrentPowerState function implementation */
-// Std_ReturnType Adc_GetCurrentPowerState (Adc_PowerStateType* CurrentPowerState,
-//                                         Adc_PowerStateRequestResultType* Result)
-// {
-//     /* This API is not work for now*/
-// }
-
-// /* Adc_GetTargetPowerState function implementation */
-// Std_ReturnType Adc_GetTargetPowerState( Adc_PowerStateType* TargetPowerState,
-//                                         Adc_PowerStateRequestResultType* Result)
-// {
-//     /* This API is not work for now*/
-// }
-
-// Std_ReturnType Adc_PreparePowerState( Adc_PowerStateType PowerState,
-//                                      Adc_PowerStateRequestResultType* Result)
-// {
-//     /* This API is not work for now*/
-// }
-/*******************************************************************************
-* Utility Functions
-*******************************************************************************/
-
-/* Adc_GetVersionInfo function implementation */
-void Adc_GetVersionInfo (Std_VersionInfoType* versioninfo)
+/**
+ * @brief   Stops conversion of the requested ADC Channel group
+ * @param[in] Group Numeric ID of the ADC channel group
+ * @return  void
+ * @reqs    SWS_Adc_00509
+ */
+void Adc_StopGroupConversion(Adc_GroupType Group)
 {
+    /* Validate parameters */
+    ADC_VALIDATE_INIT(ADC_STOP_GROUP_CONVERSION_ID);
+    ADC_VALIDATE_GROUP(Group, ADC_STOP_GROUP_CONVERSION_ID);
+    
+    /* Validate group for stop */
+    if (Adc_ValidateGroupForStop(Group) != E_OK)
+    {
+        return;
+    }
+    
+    /* Get group configuration */
+    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    Adc_HwUnitType HwUnit = GroupConfig->Adc_HwUnitId;
+    
+    /* Stop conversion based on configuration */
+
+    /* Software triggered conversion */
+    if (AdcHw_StopSwConversion(HwUnit, Group) == E_OK)
+    {
+        Adc_UpdateGroupStatus(Group, ADC_IDLE);
+    }
+    
+
+}
+
+/**
+ * @brief   Reads the group conversion result of the last completed conversion
+ * @param[in] Group Numeric ID of requested ADC channel group
+ * @param[out] DataBufferPtr Pointer to buffer for storing results
+ * @return  E_OK if results available, E_NOT_OK otherwise
+ * @reqs    SWS_Adc_00369
+ */
+Std_ReturnType Adc_ReadGroup(Adc_GroupType Group,
+                             Adc_ValueGroupType* DataBufferPtr)
+{
+    /* Validate parameters */
+    if (Adc_ValidateInit(ADC_READ_GROUP_ID) != E_OK)
+    {
+        return E_NOT_OK;
+    }
+    
+    if (Adc_ValidateGroup(Group, ADC_READ_GROUP_ID) != E_OK)
+    {
+        return E_NOT_OK;
+    }
+    
+    if (Adc_ValidatePointer(DataBufferPtr, ADC_READ_GROUP_ID) != E_OK)
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Check if results are available */
+    if ((AdcHw_GetGroupRuntimeStatus(Group) != ADC_COMPLETED) && 
+        (AdcHw_GetGroupRuntimeStatus(Group) != ADC_STREAM_COMPLETED))
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_READ_GROUP_ID, ADC_E_IDLE);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    /* Get group configuration */
+    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    Adc_HwUnitType HwUnit = GroupConfig->Adc_HwUnitId;
+    
+    /* Read results */
+    if (AdcHw_ReadResult(HwUnit, Group, DataBufferPtr) == E_OK)
+    {
+        /* Handle status transitions according to AUTOSAR */
+        Adc_HandleGroupCompletion(Group);
+        return E_OK;
+    }
+    
+    return E_NOT_OK;
+}
+
+/****************************************************************************************
+*                                 HARDWARE TRIGGER FUNCTIONS                          *
+****************************************************************************************/
+/**
+ * @brief   Enables the hardware trigger for the requested ADC Channel group
+ * @param[in] Group Numeric ID of the ADC channel group
+ * @return  void
+ * @reqs    SWS_Adc_91001
+ */
+void Adc_EnableHardwareTrigger(Adc_GroupType Group)
+{
+    /* Validate parameters */
+    ADC_VALIDATE_INIT(ADC_ENABLE_HARDWARE_TRIGGER_ID);
+    ADC_VALIDATE_GROUP(Group, ADC_ENABLE_HARDWARE_TRIGGER_ID);
+    
+    /* Check if group is configured for hardware trigger */
+    // const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    const Adc_GroupDefType* GroupConfig = &Adc_ConfigPtr->Groups[Group];
+    if (GroupConfig->Adc_TriggerSource == ADC_TRIGG_SRC_SW)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_ENABLE_HARDWARE_TRIGGER_ID, ADC_E_WRONG_TRIGG_SRC);
+        #endif
+        return;
+    }
+    
+    /* Check if group is idle */
+    if (AdcHw_GetGroupRuntimeStatus(Group) != ADC_IDLE)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_ENABLE_HARDWARE_TRIGGER_ID, ADC_E_BUSY);
+        #endif
+        return;
+    }
+    
+    /* Enable hardware trigger */
+    Adc_HwUnitType Unit = Adc_ConfigPtr->Groups[Group].Adc_HwUnitId;
+    if (AdcHw_StartHwConversion(Unit, Group) == E_OK)
+    {
+        Adc_UpdateGroupStatus(Group, ADC_BUSY);
+    }
+}
+
+/**
+ * @brief   Disables the hardware trigger for the requested ADC Channel group
+ * @param[in] Group Numeric ID of the ADC channel group
+ * @return  void
+ * @reqs    SWS_Adc_91002
+ */
+void Adc_DisableHardwareTrigger(Adc_GroupType Group)
+{
+    /* Validate parameters */
+    ADC_VALIDATE_INIT(ADC_DISABLE_HARDWARE_TRIGGER_ID);
+    ADC_VALIDATE_GROUP(Group, ADC_DISABLE_HARDWARE_TRIGGER_ID);
+    
+    /* Check if group is configured for hardware trigger */
+    // const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    const Adc_GroupDefType* GroupConfig = &Adc_ConfigPtr->Groups[Group];
+    if (GroupConfig->Adc_TriggerSource == ADC_TRIGG_SRC_SW)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_DISABLE_HARDWARE_TRIGGER_ID, ADC_E_WRONG_TRIGG_SRC);
+        #endif
+        return;
+    }
+    
+    /* Disable hardware trigger */
+    Adc_HwUnitType Unit = Adc_ConfigPtr->Groups[Group].Adc_HwUnitId;
+    if (AdcHw_StopHwConversion(Unit, Group) == E_OK)
+    {
+        Adc_UpdateGroupStatus(Group, ADC_IDLE);
+    }
+}
+
+/****************************************************************************************
+*                                 NOTIFICATION FUNCTIONS                              *
+****************************************************************************************/
+/**
+ * @brief   Enables the notification mechanism for the requested ADC Channel group
+ * @param[in] Group Numeric ID of the ADC channel group
+ * @return  void
+ * @reqs    SWS_Adc_91003
+ */
+void Adc_EnableGroupNotification(Adc_GroupType Group)
+{
+    /* Validate parameters */
+    ADC_VALIDATE_INIT(ADC_ENABLE_GROUP_NOTIFICATION_ID);
+    ADC_VALIDATE_GROUP(Group, ADC_ENABLE_GROUP_NOTIFICATION_ID);
+    
+    /* Check if notification is configured */
+    // const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    const Adc_GroupDefType* GroupConfig = &Adc_ConfigPtr->Groups[Group];
+    if (GroupConfig->Adc_NotificationCb == NULL_PTR)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_ENABLE_GROUP_NOTIFICATION_ID, ADC_E_NOTIF_CAPABILITY);
+        #endif
+        return;
+    }
+    
+    /* Enable notification */
+    Adc_GroupConfig[Group].Adc_NotificationEnable = ADC_NOTIFICATION_ENABLE;
+}
+
+/**
+ * @brief   Disables the notification mechanism for the requested ADC Channel group
+ * @param[in] Group Numeric ID of the ADC channel group
+ * @return  void
+ * @reqs    SWS_Adc_91004
+ */
+void Adc_DisableGroupNotification(Adc_GroupType Group)
+{
+    /* Validate parameters */
+    ADC_VALIDATE_INIT(ADC_DISABLE_GROUP_NOTIFICATION_ID);
+    ADC_VALIDATE_GROUP(Group, ADC_DISABLE_GROUP_NOTIFICATION_ID);
+    
+    /* Disable notification */
+    // TODO think about private group config and set by function
+    Adc_GroupConfig[Group].Adc_NotificationEnable = ADC_NOTIFICATION_DISABLE;
+}
+
+/****************************************************************************************
+*                                 STATUS FUNCTIONS                                    *
+****************************************************************************************/
+/**
+ * @brief   Returns the current status of the requested ADC Channel group
+ * @param[in] Group Numeric ID of the ADC channel group
+ * @return  Conversion status for the requested group
+ * @reqs    SWS_Adc_00374
+ */
+Adc_StatusType Adc_GetGroupStatus(Adc_GroupType Group)
+{
+    //TODO should be correct based on status of the group config
+    /* Validate parameters */
+    if (Adc_ValidateInit(ADC_GET_GROUP_STATUS_ID) != E_OK)
+    {
+        return ADC_IDLE;
+    }
+    
+    if (Adc_ValidateGroup(Group, ADC_GET_GROUP_STATUS_ID) != E_OK)
+    {
+        return ADC_IDLE;
+    }
+    
+    return AdcHw_GetGroupRuntimeStatus(Group);
+}
+
+/**
+ * @brief   Returns the number of valid samples per channel in result buffer
+ * @param[in] Group Numeric ID of the ADC channel group
+ * @param[out] PtrToSamplePtr Pointer to result buffer pointer
+ * @return  Number of valid samples per channel
+ * @reqs    SWS_Adc_00375
+ */
+Adc_StreamNumSampleType Adc_GetStreamLastPointer(Adc_GroupType Group,
+                                                 Adc_ValueGroupType** PtrToSamplePtr)
+{
+    /* Validate parameters */
+    if (Adc_ValidateInit(ADC_GET_STREAM_LAST_POINTER_ID) != E_OK)
+    {
+        return 0;
+    }
+    
+    if (Adc_ValidateGroup(Group, ADC_GET_STREAM_LAST_POINTER_ID) != E_OK)
+    {
+        return 0;
+    }
+    
+    if (Adc_ValidatePointer(PtrToSamplePtr, ADC_GET_STREAM_LAST_POINTER_ID) != E_OK)
+    {
+        return 0;
+    }
+    
+    /* Get group configuration */
+    // const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    const Adc_GroupDefType* GroupConfig = &Adc_ConfigPtr->Groups[Group];
+    
+    /* Check if streaming mode is enabled */
+    if (GroupConfig->Adc_GroupAccessMode != ADC_ACCESS_MODE_STREAMING)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_GET_STREAM_LAST_POINTER_ID, ADC_E_WRONG_CONV_MODE);
+        #endif
+        return 0;
+    }
+    
+    /* Return streaming information */
+    // *PtrToSamplePtr = GroupConfig->Adc_ValueResultPtr[Adc_RuntimeGroups[Group].SampleCounter];
+    Adc_StreamNumSampleType NbrOfSample = AdcHw_GetGroupRuntimeSampCounter(Group);
+    Adc_ChannelType NbrOfChannel = GroupConfig->Adc_NbrOfChannel;
+    *PtrToSamplePtr = &GroupConfig->Adc_ValueResultPtr[(NbrOfSample - 1) * NbrOfChannel];
+    return NbrOfSample;
+}
+
+/****************************************************************************************
+*                                 UTILITY FUNCTIONS                                   *
+****************************************************************************************/
+/**
+ * @brief   Returns the version information of the ADC driver
+ * @param[out] versioninfo Pointer to version information structure
+ * @return  void
+ * @reqs    SWS_Adc_00376
+ */
+void Adc_GetVersionInfo(Std_VersionInfoType* versioninfo)
+{
+    /* Validate pointer */
+    if (versioninfo == NULL_PTR)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_GET_VERSION_INFO_ID, ADC_E_PARAM_POINTER);
+        #endif
+        return;
+    }
+    
+    /* Fill version information */
     versioninfo->vendorID = ADC_VENDOR_ID;
     versioninfo->moduleID = ADC_MODULE_ID;
     versioninfo->sw_major_version = ADC_SW_MAJOR_VERSION;
     versioninfo->sw_minor_version = ADC_SW_MINOR_VERSION;
     versioninfo->sw_patch_version = ADC_SW_PATCH_VERSION;
 }
-/* Adc_MainFunction function implementation */
-/* Brief description of the function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
 
-/*******************************************************************************
-* Static Helper Functions
-*******************************************************************************/
+/**
+ * @brief   Calibrates the ADC hardware unit
+ * @param[in] HwUnit Hardware unit to calibrate
+ * @return  E_OK if successful, E_NOT_OK otherwise
+ */
+Std_ReturnType Adc_Calibrate(Adc_HwUnitType HwUnit)
+{
+    /* Validate parameters */
+    if (Adc_ValidateInit(ADC_CALIBRATE_ID) != E_OK)
+    {
+        return E_NOT_OK;
+    }
 
-/* Static helper function implementations */
-/* Brief description of each function */
-/* Parameters description */
-/* Return value description */
-/* Detailed explanation of implementation */
+    if (!AdcHw_ValidateHwUnit(HwUnit))
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_CALIBRATE_ID, ADC_E_PARAM_CONFIG);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    /* Check if hardware unit is idle */
+    if (AdcHw_IsUnitBusy(HwUnit))
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_CALIBRATE_ID, ADC_E_BUSY);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    /* Perform calibration */
+    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnit);
+    if (ADCx != NULL)
+    {
+        /* Start calibration */
+        ADC_StartCalibration(ADCx);
+        
+        /* Wait for calibration to complete */
+        while (ADC_GetCalibrationStatus(ADCx) != RESET)
+        {
+            /* Watchdog protection could be added here */
+        }
+        
+        return E_OK;
+    }
+    
+    return E_NOT_OK;
+}
+
+/****************************************************************************************
+*                                 DEFERRED PROCESSING FUNCTIONS                       *
+****************************************************************************************/
+/**
+ * @brief   Main function for deferred ADC processing
+ * @return  void
+ */
+void Adc_MainFunction(void)
+{
+    /* Only process if driver is initialized */
+    if (Adc_DriverState != ADC_DRIVER_STATE_INITIALIZED)
+    {
+        return;
+    }
+    
+    AdcHw_MainFunction();
+}
+
+/**
+ * @brief   Fast interrupt handler with minimal processing
+ * @param[in] HwUnit ADC hardware unit that triggered the interrupt
+ * @return  void
+ */
+void Adc_InterruptHandler(Adc_HwUnitType HwUnit)
+{
+    /* Call hardware-specific interrupt handler */
+    AdcHw_InterruptHandler(HwUnit);
+}
+
+void Adc_DMAInterruptHandler(Adc_HwUnitType HwUnit)
+{
+    /* Call DMA interrupt handler */
+    AdcHw_DmaInterruptHandler(HwUnit);
+}
+
+/****************************************************************************************
+*                                 STATIC HELPER FUNCTIONS                             *
+****************************************************************************************/
+/**
+ * @brief   Validates driver initialization
+ * @param[in] ApiId API function ID
+ * @return  E_OK if valid, E_NOT_OK otherwise
+ */
+static Std_ReturnType Adc_ValidateInit(uint8 ApiId)
+{
+    if (Adc_DriverState == ADC_DRIVER_STATE_UNINIT)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ApiId, ADC_E_UNINIT);
+        #endif
+        return E_NOT_OK;
+    }
+    return E_OK;
+}
+
+/**
+ * @brief   Validates group ID
+ * @param[in] Group Group ID to validate
+ * @param[in] ApiId API function ID
+ * @return  E_OK if valid, E_NOT_OK otherwise
+ */
+static Std_ReturnType Adc_ValidateGroup(Adc_GroupType Group, uint8 ApiId)
+{
+    if (!AdcHw_ValidateGroup(Group))
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ApiId, ADC_E_PARAM_INVALID_GROUP);
+        #endif
+        return E_NOT_OK;
+    }
+    return E_OK;
+}
+
+/**
+ * @brief   Validates pointer
+ * @param[in] Ptr Pointer to validate
+ * @param[in] ApiId API function ID
+ * @return  E_OK if valid, E_NOT_OK otherwise
+ */
+static Std_ReturnType Adc_ValidatePointer(const void* Ptr, uint8 ApiId)
+{
+    if (Ptr == NULL_PTR)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ApiId, ADC_E_PARAM_POINTER);
+        #endif
+        return E_NOT_OK;
+    }
+    return E_OK;
+}
+
+/**
+ * @brief   Initializes runtime data structures
+ * @note    Initializes Adc_RuntimeGroups and Adc_RuntimeHwUnits for controlling state in ADC_HW
+ * @return  void
+ */
+static void Adc_InitializeRuntimeData(void)
+{
+    /* These variable should be static in Adc HW and get set by function*/
+    /* Initialize runtime groups */
+    for (Adc_GroupType i = 0; i < ADC_MAX_GROUPS; i++)
+    {
+        AdcHw_ResetGroupRuntime(i);
+    }
+    
+    /* Initialize runtime hardware units */
+    for (Adc_HwUnitType i = 0; i < ADC_MAX_HW_UNITS; i++)
+    {
+        AdcHw_ResetHwRuntime(i);
+    }
+    
+    /* Initialize result buffers */
+    // memset(Adc_ResultBuffer, 0, sizeof(Adc_ResultBuffer));
+}
+
+/**
+ * @brief   Resets runtime data structures
+ * @return  void
+ */
+static void Adc_ResetRuntimeData(void)
+{
+    Adc_InitializeRuntimeData();
+}
+
+/**
+ * @brief   Validates group for start operation
+ * @param[in] Group Group ID to validate
+ * @return  E_OK if valid, E_NOT_OK otherwise
+ */
+static Std_ReturnType Adc_ValidateGroupForStart(Adc_GroupType Group)
+{
+    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    
+    /* Check if group is idle */
+    if (AdcHw_GetGroupRuntimeStatus(Group) != ADC_IDLE)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_START_GROUP_CONVERSION_ID, ADC_E_BUSY);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    /* Check if result buffer is configured */
+    if (GroupConfig->Adc_ValueResultPtr == NULL_PTR)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_START_GROUP_CONVERSION_ID, ADC_E_BUFFER_UNINIT);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    /* Check trigger source for SW trigger */
+    if (GroupConfig->Adc_TriggerSource != ADC_TRIGG_SRC_SW)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_START_GROUP_CONVERSION_ID, ADC_E_WRONG_TRIGG_SRC);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    return E_OK;
+}
+
+/**
+ * @brief   Validates group for stop operation
+ * @param[in] Group Group ID to validate
+ * @return  E_OK if valid, E_NOT_OK otherwise
+ */
+static Std_ReturnType Adc_ValidateGroupForStop(Adc_GroupType Group)
+{
+    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    
+    /* Check if group is busy */
+    if ((AdcHw_GetGroupRuntimeStatus(Group) == ADC_IDLE) || 
+        (AdcHw_GetGroupRuntimeStatus(Group) == ADC_STREAM_COMPLETED))
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_STOP_GROUP_CONVERSION_ID, ADC_E_IDLE);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    /* Check trigger source for SW trigger */
+    if (GroupConfig->Adc_TriggerSource != ADC_TRIGG_SRC_SW)
+    {
+        #if (ADC_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError(ADC_MODULE_ID, 0, ADC_STOP_GROUP_CONVERSION_ID, ADC_E_WRONG_TRIGG_SRC);
+        #endif
+        return E_NOT_OK;
+    }
+    
+    return E_OK;
+}
+
+/**
+ * @brief   Handles group completion logic for read_group() function
+ * @param[in] Group Group ID
+ * @return  void
+ */
+// TODO Check this function
+static void Adc_HandleGroupCompletion(Adc_GroupType Group)
+{
+    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
+    
+    /* Handle status transition based on configuration */
+    if (GroupConfig->Adc_GroupAccessMode == ADC_ACCESS_MODE_STREAMING)
+    {
+        if (GroupConfig->Adc_StreamBufferMode == ADC_STREAM_BUFFER_CIRCULAR)
+        {
+            /* Circular streaming - transition to BUSY */
+            Adc_UpdateGroupStatus(Group, ADC_BUSY);
+        }
+        else
+        {
+            /* Linear streaming - transition to IDLE */
+            Adc_UpdateGroupStatus(Group, ADC_IDLE);
+        }
+    }
+    else
+    {
+        /* Single access mode */
+        if (GroupConfig->Adc_GroupConvMode == ADC_CONV_MODE_CONTINUOUS)
+        {
+            /* Continuous mode - transition to BUSY */
+            Adc_UpdateGroupStatus(Group, ADC_BUSY);
+        }
+        else
+        {
+            /* One-shot mode - transition to IDLE */
+            Adc_UpdateGroupStatus(Group, ADC_IDLE);
+        }
+    }
+}
+
+/**
+ * @brief   Updates group status
+ * @param[in] Group Group ID
+ * @param[in] NewStatus New status to set
+ * @return  void
+ */
+static void Adc_UpdateGroupStatus(Adc_GroupType Group, Adc_StatusType NewStatus)
+{
+    // Adc_RuntimeGroups[Group].Status = NewStatus;
+    AdcHw_SetGroupStatus(Group,NewStatus);
+    
+    /* Update performance counters */
+    #if (ADC_ENABLE_DEBUG_SUPPORT == STD_ON)
+    switch (NewStatus)
+    {
+        case ADC_BUSY:
+            Adc_PerformanceCounters.ConversionsStarted++;
+            break;
+        case ADC_COMPLETED:
+            Adc_PerformanceCounters.ConversionsCompleted++;
+            break;
+        case ADC_STREAM_COMPLETED:
+            Adc_PerformanceCounters.StreamingCompleted++;
+            break;
+        default:
+            break;
+    }
+    #endif
+}
 
 /****************************************************************************************
 *                                 END OF FILE                                          *

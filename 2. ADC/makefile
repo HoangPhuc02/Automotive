@@ -30,7 +30,7 @@ ADC_SOURCES = $(wildcard $(MCAL_DIR)/ADC/Src/*.c)
 BSW_SOURCES = $(DIO_SOURCES) $(PORT_SOURCES) $(ADC_SOURCES)
 
 SPL_SOURCES = $(wildcard $(SPL_DIR)/Src/*.c)
-SRCS_C  = main.c $(BSW_SOURCES) $(SPL_SOURCES) 
+SRCS_C  = main.c isr.c $(BSW_SOURCES) $(SPL_SOURCES) 
 # SRCS_C  = main.c $(SPL_SOURCES) 
 SRCS_S  = startup_stm32f103.s
 # OBJS    = $(SRCS_C:.c=.o) $(SRCS_S:.s=.o)

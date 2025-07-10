@@ -21,14 +21,16 @@
 // #include "Port.h"
 
 #include "Adc_Cfg.h"
-
+volatile uint32 it_count =0;
+volatile uint32 dma_count = 0;
 
 void ADC1_2_IRQHandler(void)
 {
+    it_count++;
     // Check if the ADC conversion is complete
     if (ADC_GetITStatus(ADC1, ADC_IT_EOC) != RESET)
     {
-        Adc_TransferCplt(ADC1);
+        Adc_TransferComplete_Callback(ADC1);
 
         // Clear the interrupt flag
         ADC_ClearITPendingBit(ADC1, ADC_IT_EOC);
@@ -37,7 +39,7 @@ void ADC1_2_IRQHandler(void)
     else if (ADC_GetITStatus(ADC2, ADC_IT_EOC) != RESET)
     {
         // Handle overrun error
-        (ADC2);
+        Adc_TransferComplete_Callback(ADC1);
 
         // Clear the interrupt flag
         ADC_ClearITPendingBit(ADC2, ADC_IT_EOC);
@@ -45,9 +47,11 @@ void ADC1_2_IRQHandler(void)
 }
 void DMA1_Channel1_IRQHandler(void)
 {
+    // add for test
+    dma_count++;
     if (DMA_GetITStatus(DMA1_IT_TC1))
     {
-        Adc_DmaTransferCplt(DMA1_Channel1);
+        Adc_DmaTransferComplete_Callback(DMA1_Channel1);
         DMA_ClearITPendingBit(DMA1_IT_TC1);
     }
 }

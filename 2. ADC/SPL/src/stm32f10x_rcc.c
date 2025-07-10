@@ -2,18 +2,25 @@
   ******************************************************************************
   * @file    stm32f10x_rcc.c
   * @author  MCD Application Team
-  * @version V3.6.2
-  * @date    17-September-2021
+  * @version V3.6.1
+  * @date    05-March-2012
   * @brief   This file provides all the RCC firmware functions.
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2012 STMicroelectronics.
-  * All rights reserved.
+  * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
   *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
+  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
+  * You may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at:
+  *
+  *        http://www.st.com/software_license_agreement_liberty_v2
+  *
+  * Unless required by applicable law or agreed to in writing, software 
+  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
   *
   ******************************************************************************
   */
@@ -818,7 +825,6 @@ void RCC_I2S3CLKConfig(uint32_t RCC_I2S3CLKSource)
 
 /**
   * @brief  Configures the External Low Speed oscillator (LSE).
-  * @note   LSEON is cleared regardless of the function's argument value.
   * @param  RCC_LSE: specifies the new state of the LSE.
   *   This parameter can be one of the following values:
   *     @arg RCC_LSE_OFF: LSE oscillator OFF
@@ -1467,3 +1473,4 @@ void RCC_ClearITPendingBit(uint8_t RCC_IT)
   * @}
   */
 
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

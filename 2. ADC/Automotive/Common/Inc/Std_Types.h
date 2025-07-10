@@ -40,7 +40,7 @@ typedef signed long         sint32;     /* 32-bit signed integer    */
 typedef unsigned long       uint32;     /* 32-bit unsigned integer  */
 typedef signed long long    sint64;     /* 64-bit signed integer    */
 typedef unsigned long long  uint64;     /* 64-bit unsigned integer  */
-
+typedef enum {FALSE, TRUE}  boolean;
 /****************************************************************************************
 *                              POINTER  DEFINITIONS                                     *
 ****************************************************************************************/
