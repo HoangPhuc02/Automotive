@@ -28,16 +28,13 @@
 /****************************************************************************************
 *                                 GLOBAL VARIABLES                                     *
 ****************************************************************************************/
+typedef enum
+{
+    ADC_DRIVER_STATE_UNINIT = 0,   /*!< Driver uninitialized */
+    ADC_DRIVER_STATE_INITIALIZED,   /*!< Driver initialized */
+} Adc_DriverStateType;
 /* Driver state */
 static Adc_DriverStateType Adc_DriverState = ADC_DRIVER_STATE_UNINIT;
-/**
- * @brief   Get current driver state
- * @return  Current driver state
- */
-inline Adc_DriverStateType Adc_GetDriverState(void)
-{
-    return Adc_DriverState;
-}
 
 /* Configuration pointer */
 static const Adc_ConfigType* Adc_ConfigPtr = NULL_PTR;
@@ -206,6 +203,8 @@ Std_ReturnType Adc_SetupResultBuffer(Adc_GroupType Group,
     {
         Adc_GroupConfig[Group].Adc_ValueResultPtr[i] = 0;
     }
+    // Allow group conversion
+    Adc_GroupConfig[Group].Adc_SetupBufferFlag = 1;
     return E_OK;
 }
 
@@ -221,8 +220,8 @@ Std_ReturnType Adc_SetupResultBuffer(Adc_GroupType Group,
 void Adc_StartGroupConversion(Adc_GroupType Group)
 {
     /* Validate parameters */
-    ADC_VALIDATE_INIT(ADC_START_GROUP_CONVERSION_ID);
-    ADC_VALIDATE_GROUP(Group, ADC_START_GROUP_CONVERSION_ID);
+    Adc_ValidateInit(ADC_START_GROUP_CONVERSION_ID);
+    Adc_ValidateGroup(Group, ADC_START_GROUP_CONVERSION_ID);
     
     /* Validate group for start */
     if (Adc_ValidateGroupForStart(Group) != E_OK)
@@ -257,8 +256,8 @@ void Adc_StartGroupConversion(Adc_GroupType Group)
 void Adc_StopGroupConversion(Adc_GroupType Group)
 {
     /* Validate parameters */
-    ADC_VALIDATE_INIT(ADC_STOP_GROUP_CONVERSION_ID);
-    ADC_VALIDATE_GROUP(Group, ADC_STOP_GROUP_CONVERSION_ID);
+    Adc_ValidateInit(ADC_STOP_GROUP_CONVERSION_ID);
+    Adc_ValidateGroup(Group, ADC_STOP_GROUP_CONVERSION_ID);
     
     /* Validate group for stop */
     if (Adc_ValidateGroupForStop(Group) != E_OK)
@@ -308,8 +307,8 @@ Std_ReturnType Adc_ReadGroup(Adc_GroupType Group,
     }
     
     /* Check if results are available */
-    if ((AdcHw_GetGroupRuntimeStatus(Group) != ADC_COMPLETED) && 
-        (AdcHw_GetGroupRuntimeStatus(Group) != ADC_STREAM_COMPLETED))
+    if ((Adc_GetGroupStatus(Group) == ADC_IDLE) || 
+        (Adc_GetGroupStatus(Group) == ADC_BUSY))
     {
         #if (ADC_DEV_ERROR_DETECT == STD_ON)
         Det_ReportError(ADC_MODULE_ID, 0, ADC_READ_GROUP_ID, ADC_E_IDLE);
@@ -322,14 +321,13 @@ Std_ReturnType Adc_ReadGroup(Adc_GroupType Group,
     Adc_HwUnitType HwUnit = GroupConfig->Adc_HwUnitId;
     
     /* Read results */
-    if (AdcHw_ReadResult(HwUnit, Group, DataBufferPtr) == E_OK)
+    if (AdcHw_ReadResult(HwUnit, Group, DataBufferPtr) == E_NOT_OK)
     {
-        /* Handle status transitions according to AUTOSAR */
-        Adc_HandleGroupCompletion(Group);
-        return E_OK;
+        return E_NOT_OK;
     }
-    
-    return E_NOT_OK;
+        /* Handle status transitions according to AUTOSAR */
+    Adc_HandleGroupCompletion(Group);
+    return E_OK;
 }
 
 /****************************************************************************************
@@ -344,8 +342,8 @@ Std_ReturnType Adc_ReadGroup(Adc_GroupType Group,
 void Adc_EnableHardwareTrigger(Adc_GroupType Group)
 {
     /* Validate parameters */
-    ADC_VALIDATE_INIT(ADC_ENABLE_HARDWARE_TRIGGER_ID);
-    ADC_VALIDATE_GROUP(Group, ADC_ENABLE_HARDWARE_TRIGGER_ID);
+    Adc_ValidateInit(ADC_ENABLE_HARDWARE_TRIGGER_ID);
+    Adc_ValidateGroup(Group, ADC_ENABLE_HARDWARE_TRIGGER_ID);
     
     /* Check if group is configured for hardware trigger */
     // const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
@@ -384,8 +382,8 @@ void Adc_EnableHardwareTrigger(Adc_GroupType Group)
 void Adc_DisableHardwareTrigger(Adc_GroupType Group)
 {
     /* Validate parameters */
-    ADC_VALIDATE_INIT(ADC_DISABLE_HARDWARE_TRIGGER_ID);
-    ADC_VALIDATE_GROUP(Group, ADC_DISABLE_HARDWARE_TRIGGER_ID);
+    Adc_ValidateInit(ADC_DISABLE_HARDWARE_TRIGGER_ID);
+    Adc_ValidateGroup(Group, ADC_DISABLE_HARDWARE_TRIGGER_ID);
     
     /* Check if group is configured for hardware trigger */
     // const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
@@ -415,11 +413,12 @@ void Adc_DisableHardwareTrigger(Adc_GroupType Group)
  * @return  void
  * @reqs    SWS_Adc_91003
  */
+
 void Adc_EnableGroupNotification(Adc_GroupType Group)
 {
     /* Validate parameters */
-    ADC_VALIDATE_INIT(ADC_ENABLE_GROUP_NOTIFICATION_ID);
-    ADC_VALIDATE_GROUP(Group, ADC_ENABLE_GROUP_NOTIFICATION_ID);
+    Adc_ValidateInit(ADC_ENABLE_GROUP_NOTIFICATION_ID);
+    Adc_ValidateGroup(Group, ADC_ENABLE_GROUP_NOTIFICATION_ID);
     
     /* Check if notification is configured */
     // const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
@@ -445,8 +444,8 @@ void Adc_EnableGroupNotification(Adc_GroupType Group)
 void Adc_DisableGroupNotification(Adc_GroupType Group)
 {
     /* Validate parameters */
-    ADC_VALIDATE_INIT(ADC_DISABLE_GROUP_NOTIFICATION_ID);
-    ADC_VALIDATE_GROUP(Group, ADC_DISABLE_GROUP_NOTIFICATION_ID);
+    Adc_ValidateInit(ADC_DISABLE_GROUP_NOTIFICATION_ID);
+    Adc_ValidateGroup(Group, ADC_DISABLE_GROUP_NOTIFICATION_ID);
     
     /* Disable notification */
     // TODO think about private group config and set by function
@@ -463,20 +462,8 @@ void Adc_DisableGroupNotification(Adc_GroupType Group)
  * @reqs    SWS_Adc_00374
  */
 Adc_StatusType Adc_GetGroupStatus(Adc_GroupType Group)
-{
-    //TODO should be correct based on status of the group config
-    /* Validate parameters */
-    if (Adc_ValidateInit(ADC_GET_GROUP_STATUS_ID) != E_OK)
-    {
-        return ADC_IDLE;
-    }
-    
-    if (Adc_ValidateGroup(Group, ADC_GET_GROUP_STATUS_ID) != E_OK)
-    {
-        return ADC_IDLE;
-    }
-    
-    return AdcHw_GetGroupRuntimeStatus(Group);
+{   
+    return Adc_GroupConfig[Group].Adc_Status;
 }
 
 /**
@@ -523,6 +510,8 @@ Adc_StreamNumSampleType Adc_GetStreamLastPointer(Adc_GroupType Group,
     Adc_StreamNumSampleType NbrOfSample = AdcHw_GetGroupRuntimeSampCounter(Group);
     Adc_ChannelType NbrOfChannel = GroupConfig->Adc_NbrOfChannel;
     *PtrToSamplePtr = &GroupConfig->Adc_ValueResultPtr[(NbrOfSample - 1) * NbrOfChannel];
+
+    Adc_HandleGroupCompletion(Group);
     return NbrOfSample;
 }
 
@@ -559,49 +548,49 @@ void Adc_GetVersionInfo(Std_VersionInfoType* versioninfo)
  * @param[in] HwUnit Hardware unit to calibrate
  * @return  E_OK if successful, E_NOT_OK otherwise
  */
-Std_ReturnType Adc_Calibrate(Adc_HwUnitType HwUnit)
-{
-    /* Validate parameters */
-    if (Adc_ValidateInit(ADC_CALIBRATE_ID) != E_OK)
-    {
-        return E_NOT_OK;
-    }
+// Std_ReturnType Adc_Calibrate(Adc_HwUnitType HwUnit)
+// {
+//     /* Validate parameters */
+//     if (Adc_ValidateInit(ADC_CALIBRATE_ID) != E_OK)
+//     {
+//         return E_NOT_OK;
+//     }
 
-    if (!AdcHw_ValidateHwUnit(HwUnit))
-    {
-        #if (ADC_DEV_ERROR_DETECT == STD_ON)
-        Det_ReportError(ADC_MODULE_ID, 0, ADC_CALIBRATE_ID, ADC_E_PARAM_CONFIG);
-        #endif
-        return E_NOT_OK;
-    }
+//     if (!AdcHw_ValidateHwUnit(HwUnit))
+//     {
+//         #if (ADC_DEV_ERROR_DETECT == STD_ON)
+//         Det_ReportError(ADC_MODULE_ID, 0, ADC_CALIBRATE_ID, ADC_E_PARAM_CONFIG);
+//         #endif
+//         return E_NOT_OK;
+//     }
     
-    /* Check if hardware unit is idle */
-    if (AdcHw_IsUnitBusy(HwUnit))
-    {
-        #if (ADC_DEV_ERROR_DETECT == STD_ON)
-        Det_ReportError(ADC_MODULE_ID, 0, ADC_CALIBRATE_ID, ADC_E_BUSY);
-        #endif
-        return E_NOT_OK;
-    }
+//     /* Check if hardware unit is idle */
+//     if (AdcHw_IsUnitBusy(HwUnit))
+//     {
+//         #if (ADC_DEV_ERROR_DETECT == STD_ON)
+//         Det_ReportError(ADC_MODULE_ID, 0, ADC_CALIBRATE_ID, ADC_E_BUSY);
+//         #endif
+//         return E_NOT_OK;
+//     }
     
-    /* Perform calibration */
-    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnit);
-    if (ADCx != NULL)
-    {
-        /* Start calibration */
-        ADC_StartCalibration(ADCx);
+//     /* Perform calibration */
+//     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnit);
+//     if (ADCx != NULL)
+//     {
+//         /* Start calibration */
+//         ADC_StartCalibration(ADCx);
         
-        /* Wait for calibration to complete */
-        while (ADC_GetCalibrationStatus(ADCx) != RESET)
-        {
-            /* Watchdog protection could be added here */
-        }
+//         /* Wait for calibration to complete */
+//         while (ADC_GetCalibrationStatus(ADCx) != RESET)
+//         {
+//             /* Watchdog protection could be added here */
+//         }
         
-        return E_OK;
-    }
+//         return E_OK;
+//     }
     
-    return E_NOT_OK;
-}
+//     return E_NOT_OK;
+// }
 
 /****************************************************************************************
 *                                 DEFERRED PROCESSING FUNCTIONS                       *
@@ -621,22 +610,22 @@ void Adc_MainFunction(void)
     AdcHw_MainFunction();
 }
 
-/**
- * @brief   Fast interrupt handler with minimal processing
- * @param[in] HwUnit ADC hardware unit that triggered the interrupt
- * @return  void
- */
-void Adc_InterruptHandler(Adc_HwUnitType HwUnit)
-{
-    /* Call hardware-specific interrupt handler */
-    AdcHw_InterruptHandler(HwUnit);
-}
+// /**
+//  * @brief   Fast interrupt handler with minimal processing
+//  * @param[in] HwUnit ADC hardware unit that triggered the interrupt
+//  * @return  void
+//  */
+// void Adc_InterruptHandler(Adc_HwUnitType HwUnit)
+// {
+//     /* Call hardware-specific interrupt handler */
+//     AdcHw_InterruptHandler(HwUnit);
+// }
 
-void Adc_DMAInterruptHandler(Adc_HwUnitType HwUnit)
-{
-    /* Call DMA interrupt handler */
-    AdcHw_DmaInterruptHandler(HwUnit);
-}
+// void Adc_DMAInterruptHandler(Adc_HwUnitType HwUnit)
+// {
+//     /* Call DMA interrupt handler */
+//     AdcHw_DmaInterruptHandler(HwUnit);
+// }
 
 /****************************************************************************************
 *                                 STATIC HELPER FUNCTIONS                             *
@@ -646,7 +635,7 @@ void Adc_DMAInterruptHandler(Adc_HwUnitType HwUnit)
  * @param[in] ApiId API function ID
  * @return  E_OK if valid, E_NOT_OK otherwise
  */
-static Std_ReturnType Adc_ValidateInit(uint8 ApiId)
+static inline Std_ReturnType Adc_ValidateInit(uint8 ApiId)
 {
     if (Adc_DriverState == ADC_DRIVER_STATE_UNINIT)
     {
@@ -664,7 +653,7 @@ static Std_ReturnType Adc_ValidateInit(uint8 ApiId)
  * @param[in] ApiId API function ID
  * @return  E_OK if valid, E_NOT_OK otherwise
  */
-static Std_ReturnType Adc_ValidateGroup(Adc_GroupType Group, uint8 ApiId)
+static inline Std_ReturnType Adc_ValidateGroup(Adc_GroupType Group, uint8 ApiId)
 {
     if (!AdcHw_ValidateGroup(Group))
     {
@@ -682,7 +671,7 @@ static Std_ReturnType Adc_ValidateGroup(Adc_GroupType Group, uint8 ApiId)
  * @param[in] ApiId API function ID
  * @return  E_OK if valid, E_NOT_OK otherwise
  */
-static Std_ReturnType Adc_ValidatePointer(const void* Ptr, uint8 ApiId)
+static inline Std_ReturnType Adc_ValidatePointer(const void* Ptr, uint8 ApiId)
 {
     if (Ptr == NULL_PTR)
     {
@@ -699,7 +688,7 @@ static Std_ReturnType Adc_ValidatePointer(const void* Ptr, uint8 ApiId)
  * @note    Initializes Adc_RuntimeGroups and Adc_RuntimeHwUnits for controlling state in ADC_HW
  * @return  void
  */
-static void Adc_InitializeRuntimeData(void)
+static inline void Adc_InitializeRuntimeData(void)
 {
     /* These variable should be static in Adc HW and get set by function*/
     /* Initialize runtime groups */
@@ -746,7 +735,7 @@ static Std_ReturnType Adc_ValidateGroupForStart(Adc_GroupType Group)
     }
     
     /* Check if result buffer is configured */
-    if (GroupConfig->Adc_ValueResultPtr == NULL_PTR)
+    if (GroupConfig->Adc_ValueResultPtr == NULL_PTR || GroupConfig->Adc_SetupBufferFlag == 0)
     {
         #if (ADC_DEV_ERROR_DETECT == STD_ON)
         Det_ReportError(ADC_MODULE_ID, 0, ADC_START_GROUP_CONVERSION_ID, ADC_E_BUFFER_UNINIT);
@@ -846,7 +835,7 @@ static void Adc_HandleGroupCompletion(Adc_GroupType Group)
 static void Adc_UpdateGroupStatus(Adc_GroupType Group, Adc_StatusType NewStatus)
 {
     // Adc_RuntimeGroups[Group].Status = NewStatus;
-    AdcHw_SetGroupStatus(Group,NewStatus);
+    AdcHw_SetGroupStatus(Group, ADC_IDLE);
     
     /* Update performance counters */
     #if (ADC_ENABLE_DEBUG_SUPPORT == STD_ON)

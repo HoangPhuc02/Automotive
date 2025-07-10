@@ -24,10 +24,6 @@
 /****************************************************************************************
 *                              VERSION INFORMATION                                     *
 ****************************************************************************************/
-/* UNUSED - Version defines not used in source code */
-/* #define ADC_CFG_SW_MAJOR_VERSION    2 */
-/* #define ADC_CFG_SW_MINOR_VERSION    0 */
-/* #define ADC_CFG_SW_PATCH_VERSION    0 */
 
 /****************************************************************************************
 *                              CONFIGURATION PARAMETERS                                *

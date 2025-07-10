@@ -89,6 +89,7 @@
 extern Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS];
 extern Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS];
 
+
 /****************************************************************************************
 *                              INITIALIZATION FUNCTIONS                               *
 ****************************************************************************************/
@@ -196,27 +197,19 @@ Std_ReturnType AdcHw_ReadStreamingResults(Adc_HwUnitType HwUnitId,
 *                              STATUS FUNCTIONS                                       *
 ****************************************************************************************/
 /**
- * @brief Get private ADC group runtime status
-//  * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return Group status
- */
-// Adc_StatusType AdcHw_GetGroupStatus(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
-Adc_StatusType AdcHw_GetGroupRuntimeStatus(Adc_GroupType GroupId);
-
-/**
- * @brief Set private ADC group runtime status
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return Group status
- */
-void AdcHw_SetGroupRuntimeStatus(Adc_GroupType GroupId, Adc_StatusType GroupStatus);
-/**
  * @brief Set private ADC group runtime status
  * @param[in] GroupId ADC group ID
  * @return Sample Counter
  */
 Adc_StreamNumSampleType AdcHw_GetGroupRuntimeSampCounter(Adc_GroupType GroupId);
+
+/**
+ * @brief Get ADC group status
+ * @param[in] HwUnitId ADC hardware unit ID
+ * @param[in] GroupId ADC group ID
+ * @return Group status
+ */
+Adc_StatusType AdcHw_GetGroupRuntimeStatus(Adc_GroupType GroupId);
 
 /**
  * @brief Reset private ADC group runtime Parameter
@@ -225,6 +218,10 @@ Adc_StreamNumSampleType AdcHw_GetGroupRuntimeSampCounter(Adc_GroupType GroupId);
  */
 Std_ReturnType AdcHw_ResetGroupRuntime(Adc_GroupType GroupId);
 
+/**
+ * 
+ */
+void AdcHw_SetGroupStatus(Adc_GroupType GroupId, Adc_StatusType Status);
 /**
  * @brief Reset private ADC hw runtime  Parameter
  * @param[in] HwUnitId ADC hardware unit ID
@@ -246,12 +243,6 @@ HwUnitState AdcHw_IsUnitBusy(Adc_HwUnitType HwUnitId);
  */
 Adc_ChannelType AdcHw_GetCurrentChannel(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
-
-/**
- * @brief 
- * 
- */
-void AdcHw_SetGroupStatus(Adc_GroupType GroupId, Adc_StatusType GroupStatus);
 
 /****************************************************************************************
 *                              DMA FUNCTIONS                                          *
@@ -364,6 +355,7 @@ Std_ReturnType AdcHw_ClearQueue(Adc_HwUnitType HwUnitId);
 /****************************************************************************************
 *                              STREAMING FUNCTIONS                                    *
 ****************************************************************************************/
+//TODO: wil be use in ver 3.0
 #if (ADC_ENABLE_STREAMING == STD_ON)
 /**
  * @brief Configure streaming buffer

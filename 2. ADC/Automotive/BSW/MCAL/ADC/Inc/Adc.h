@@ -98,7 +98,7 @@
 /****************************************************************************************
 *                              GLOBAL VARIABLES                                        *
 ****************************************************************************************/
-extern const Adc_HwUnitType Adc_HwUnitConfig[NUM_OF_ADC_HW_UNITS];
+extern Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS];
 extern Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS];
 /****************************************************************************************
 *                              FUNCTION PROTOTYPES                                     *

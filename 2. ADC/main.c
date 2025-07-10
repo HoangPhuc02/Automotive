@@ -73,8 +73,10 @@ int main()
     Timer_Init();
     Port_Init(&PortCfg_Port);
     Adc_Init(&Adc_Config);
+    Adc_SetupResultBuffer(Adc_Config.Groups[0].Adc_GroupId, Adc_Config.Groups[0].Adc_ValueResultPtr);
+    Adc_SetupResultBuffer(Adc_Config.Groups[1].Adc_GroupId, Adc_Config.Groups[1].Adc_ValueResultPtr);
     Adc_StartGroupConversion(Adc_Config.Groups[0].Adc_GroupId);
-    // Adc_StartGroupConversion(Adc_Config.Groups[1].Adc_GroupId);
+    Adc_StartGroupConversion(Adc_Config.Groups[1].Adc_GroupId);
     // Adc_StartGroupConversion(Adc_Config.Groups[2].Adc_GroupId);
     Adc_GroupType i = 0;
     while (1)

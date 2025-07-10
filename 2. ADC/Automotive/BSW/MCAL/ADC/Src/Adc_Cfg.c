@@ -25,11 +25,11 @@ static const Adc_ChannelDefType Adc_ChannelGroup1[] =
 {
     {
         .Adc_ChannelId = 0,                          /* PA0 - ADC1_IN0 */
-        .Adc_ChannelSampTime = ADC_SampleTime_28Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     },
     {
         .Adc_ChannelId = 1,                          /* PA1 - ADC1_IN1 */
-        .Adc_ChannelSampTime = ADC_SampleTime_28Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     }
 };
 #define ADC_CHANNEL_GROUP_1_SIZE sizeof(Adc_ChannelGroup1)/sizeof(Adc_ChannelDefType)
@@ -40,11 +40,11 @@ static const Adc_ChannelDefType Adc_ChannelGroup2[] =
 {
     {
         .Adc_ChannelId = 1,                          /* PA2 - ADC1_IN2 */
-        .Adc_ChannelSampTime = ADC_SampleTime_28Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     },
     {
         .Adc_ChannelId = 0,                          /* PA3 - ADC1_IN3 */
-        .Adc_ChannelSampTime = ADC_SampleTime_28Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     }
 };
 #define ADC_CHANNEL_GROUP_2_SIZE sizeof(Adc_ChannelGroup2)/sizeof(Adc_ChannelDefType)
@@ -54,19 +54,19 @@ static const Adc_ChannelDefType Adc_ChannelGroup3[4] =
 {
     {
         .Adc_ChannelId = 5,                          /* PA5 - ADC1_IN5 */
-        .Adc_ChannelSampTime = ADC_SampleTime_13Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     },
     {
         .Adc_ChannelId = 6,                          /* PA6 - ADC1_IN6 */
-        .Adc_ChannelSampTime = ADC_SampleTime_13Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     },
     {
         .Adc_ChannelId = 7,                          /* PA7 - ADC1_IN7 */
-        .Adc_ChannelSampTime = ADC_SampleTime_13Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     },
     {
         .Adc_ChannelId = 8,                          /* PB0 - ADC1_IN8 */
-        .Adc_ChannelSampTime = ADC_SampleTime_13Cycles5
+        .Adc_ChannelSampTime = ADC_SAMPLING_TIME_DEFAULT
     }
 };
 #define ADC_CHANNEL_GROUP_3_SIZE sizeof(Adc_ChannelGroup3)/sizeof(Adc_ChannelDefType)
@@ -186,6 +186,7 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_StreamNumSamples = 1,                       /* 4 samples per channel */
         .Adc_ValueResultPtr = Adc_Group1_ResultBuffer,
         .Adc_ValueResultSize = 2,                        /* 2 channels × 4 samples = 8 */
+        .Adc_SetupBufferFlag = 0,
         .Adc_NotificationCb = Adc_Group1_Notification,
         .Adc_NotificationEnable = ADC_NOTIFICATION_ENABLE,
         .Adc_InterruptType = ADC_HW_DMA
@@ -210,6 +211,7 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_StreamNumSamples = 1,
         .Adc_ValueResultPtr = Adc_Group2_ResultBuffer,
         .Adc_ValueResultSize = 1,                        /* 3 channels × 2 samples = 6 */
+        .Adc_SetupBufferFlag = 0,
         .Adc_NotificationCb = Adc_Group2_Notification,
         .Adc_NotificationEnable = ADC_NOTIFICATION_ENABLE,
         .Adc_InterruptType = ADC_HW_DMA
@@ -234,6 +236,7 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_StreamNumSamples = 5,
         .Adc_ValueResultPtr = Adc_Group3_ResultBuffer,
         .Adc_ValueResultSize = 20,                       /* 4 channels × 5 samples = 20 */
+        .Adc_SetupBufferFlag = 0,
         .Adc_NotificationCb = Adc_Group3_Notification,
         .Adc_NotificationEnable = ADC_NOTIFICATION_ENABLE,
         .Adc_InterruptType = ADC_HW_DMA
@@ -259,6 +262,7 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_StreamNumSamples = 1,
         .Adc_ValueResultPtr = NULL_PTR,
         .Adc_ValueResultSize = 0,
+        .Adc_SetupBufferFlag = 0,
         .Adc_NotificationCb = NULL_PTR,
         .Adc_NotificationEnable = ADC_NOTIFICATION_DISABLE
     },
@@ -282,7 +286,8 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_StreamNumSamples = 1,
         .Adc_ValueResultPtr = NULL_PTR,
         .Adc_ValueResultSize = 0,
- 
+        .Adc_SetupBufferFlag = 0,
+
         .Adc_NotificationCb = NULL_PTR,
         .Adc_NotificationEnable = ADC_NOTIFICATION_DISABLE
     },
@@ -294,6 +299,7 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
 /****************************************************************************************
 *                                 HARDWARE UNIT CONFIGURATIONS                         *
 ****************************************************************************************/
+
 Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS] = 
 {
     /* ADC Hardware Unit 0 (ADC1) */

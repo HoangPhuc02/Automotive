@@ -25,7 +25,7 @@
 *                               VERSION INFORMATION                                    *
 ****************************************************************************************/
 #define ADC_SW_MAJOR_VERSION    2
-#define ADC_SW_MINOR_VERSION    1
+#define ADC_SW_MINOR_VERSION    2
 #define ADC_SW_PATCH_VERSION    0
 
 /****************************************************************************************
@@ -382,7 +382,7 @@ typedef struct
     /* Result Buffer Configuration */
     Adc_ValueGroupType*     Adc_ValueResultPtr;     /*!< Result buffer pointer */
     uint16                  Adc_ValueResultSize;    /*!< Result buffer size */
-    uint8                   Adc_SetupBufferValue;   /*!< Check buffer is reset 1: Reset, 0: Not reset yet*/
+    uint8                   Adc_SetupBufferFlag;   /*!< Check buffer is reset 1: Reset, 0: Not reset yet*/
     /* Notification Configuration */
     Adc_NotificationCallBack Adc_NotificationCb;    /*!< Notification callback */
     uint8                    Adc_NotificationEnable; /*!< Notification enable flag */
