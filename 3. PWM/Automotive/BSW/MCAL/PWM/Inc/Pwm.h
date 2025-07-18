@@ -49,18 +49,31 @@
 #define PWM_ENABLE_NOTIFICATION_ID     0x07    /*!< Service ID for Pwm_EnableNotification */
 #define PWM_GET_VERSION_INFO_ID        0x08    /*!< Service ID for Pwm_GetVersionInfo */
 
+/* NOT USED */
+#define PWM_SET_POWER_STATE_ID          0x09    /*!< Service ID for Pwm_SetPowerState */
+#define PWM_GET_CURRENT_POWER_STATE_ID  0x0A    /*!< Service ID for Pwm_GetCurrentPowerState */
+#define PWM_GET_TARGET_POWER_STATE_ID   0x0B    /*!< Service ID for Pwm_GetTargetPowerState */
+#define PWM_PREPARE_POWER_STATE_ID      0x0C    /*!< Service ID for Pwm_PreparePowerState */
 /****************************************************************************************
 *                              DEVELOPMENT ERROR CODES                                 *
 ****************************************************************************************/
-#define PWM_E_PARAM_CONFIG              0x10    /*!< API called with wrong parameter */
+#define PWM_E_INT_FAILED                0x10    /*!<  API Pwm_Init service called with wrong parameter*/
 #define PWM_E_UNINIT                    0x11    /*!< API called without module initialization */
 #define PWM_E_PARAM_CHANNEL             0x12    /*!< API called with invalid channel identifier */
 #define PWM_E_PERIOD_UNCHANGEABLE       0x13    /*!< Usage of unauthorized PWM service on PWM channel configured as fixed period */
 #define PWM_E_ALREADY_INITIALIZED       0x14    /*!< PWM already initialized */
 #define PWM_E_PARAM_POINTER             0x15    /*!< API called with invalid pointer */
+// these error codes don't exist
+// TODO remove check and remove
 #define PWM_E_PARAM_VALUE               0x16    /*!< API called with invalid parameter value */
 #define PWM_E_TIMEOUT                   0x17    /*!< Operation timeout */
 #define PWM_E_HW_FAILURE                0x18    /*!< Hardware failure */
+
+/*!< NOT USED */
+#define PWM_E_POWER_STATE_NOT_SUPPORTED 0x17  /*!<  The requested power state is not supported by the PWM module. */
+#define PWM_E_TRANSITION_NOT_POSSIBLE    0x18 /*!<  The requested power state is not reachable from the current one*/
+#define PWM_E_PERIPHERAL_NOT_PREPARED     0x19  /*!<  API Pwm_SetPowerState has been called without having called the API Pwm_PreparePowerState before.*/
+
 
 /****************************************************************************************
 *                              RUNTIME ERROR CODES                                     *
@@ -70,50 +83,89 @@
 #define PWM_E_PERIOD_OUT_OF_RANGE       0x1B    /*!< Period out of range */
 
 /****************************************************************************************
+*                              GLOBAL VARIABLES                                        *
+****************************************************************************************/
+
+/* Driver state */
+extern Pwm_DriverStateType Pwm_DriverState;
+
+/* Configuration pointer */
+extern const Pwm_ConfigType* Pwm_ConfigPtr;
+
+/****************************************************************************************
 *                                 CORE API FUNCTIONS                                  *
 ****************************************************************************************/
 
 /* === INITIALIZATION === */
 /**
- * @brief Initialize PWM driver
+ * @brief Service for PWM initialization
+ * @details [SWS_Pwm_00095] Definition of API function Pwm_Init
  * @param[in] ConfigPtr Pointer to configuration set
+ * @return void
+ * @ServiceID 0x00
+ * @Sync Synchronous
+ * @Reentrancy Non Reentrant
  */
 void Pwm_Init(const Pwm_ConfigType* ConfigPtr);
 
 /**
- * @brief Deinitialize PWM driver  
+ * @brief Service for PWM De-Initialization
+ * @details [SWS_Pwm_00096] Definition of API function Pwm_DeInit
+ * @return void
+ * @ServiceID 0x01
+ * @Sync Synchronous
+ * @Reentrancy Non Reentrant
  */
 void Pwm_DeInit(void);
 
 /* === BASIC CONTROL === */
 /**
- * @brief Set PWM duty cycle
- * @param[in] ChannelNumber PWM channel (0 to PWM_MAX_CHANNELS-1)
- * @param[in] DutyCycle Duty cycle (0x0000=0% to 0x8000=100%)
- * @reqs 
+ * @brief Service to set the duty cycle of the PWM channel
+ * @details [SWS_Pwm_00097] Definition of API function Pwm_SetDutyCycle
+ * @param[in] ChannelId Numeric identifier of the PWM channel
+ * @param[in] DutyCycle Min=0x0000 Max=0x8000
+ * @return void
+ * @ServiceID 0x02
+ * @Sync Synchronous
+ * @Reentrancy Reentrant for different channel numbers
  */
 void Pwm_SetDutyCycle(Pwm_ChannelType ChannelNumber, uint16 DutyCycle);
 
 /**
- * @brief Set both period and duty cycle
- * @param[in] ChannelNumber PWM channel
- * @param[in] Period Period in timer ticks
- * @param[in] DutyCycle Duty cycle (0x0000-0x8000)
+ * @brief Service to set the period and the duty cycle of a PWM channel
+ * @details [SWS_Pwm_00098] Definition of API function Pwm_SetPeriodAndDuty
+ * @param[in] ChannelId Numeric identifier of the PWM channel
+ * @param[in] Period Period of the PWM signal
+ * @param[in] DutyCycle Min=0x0000 Max=0x8000
+ * @return void
+ * @ServiceID 0x03
+ * @Sync Synchronous
+ * @Reentrancy Reentrant for different channel numbers
  */
 void Pwm_SetPeriodAndDuty(Pwm_ChannelType ChannelNumber, 
                           Pwm_PeriodType Period, 
                           uint16 DutyCycle);
 
 /**
- * @brief Set channel output to idle state
- * @param[in] ChannelNumber PWM channel
+ * @brief Service to set the PWM output to the configured Idle state
+ * @details [SWS_Pwm_00099] Definition of API function Pwm_SetOutputToIdle
+ * @param[in] ChannelId Numeric identifier of the PWM channel
+ * @return void
+ * @ServiceID 0x04
+ * @Sync Synchronous
+ * @Reentrancy Reentrant for different channel numbers
  */
 void Pwm_SetOutputToIdle(Pwm_ChannelType ChannelNumber);
 
 /**
- * @brief Get current PWM output state
- * @param[in] ChannelNumber PWM channel
- * @return PWM_HIGH or PWM_LOW
+ * @brief Service to read the internal state of the PWM output signal
+ * @details [SWS_Pwm_00100] Definition of API function Pwm_GetOutputState
+ * @param[in] ChannelId Numeric identifier of the PWM channel
+ * @return PWM_HIGH The PWM output state is high
+ * @return PWM_LOW The PWM output state is low
+ * @ServiceID 0x05
+ * @Sync Synchronous
+ * @Reentrancy Reentrant
  */
 Pwm_OutputStateType Pwm_GetOutputState(Pwm_ChannelType ChannelNumber);
 
@@ -141,15 +193,7 @@ uint8 Pwm_DutyCycleToPercentage(uint16 DutyCycle);
  */
 void Pwm_GetVersionInfo(Std_VersionInfoType* versioninfo);
 
-/****************************************************************************************
-*                              GLOBAL VARIABLES                                        *
-****************************************************************************************/
 
-/* Driver state */
-extern Pwm_DriverStateType Pwm_DriverState;
-
-/* Configuration pointer */
-extern const Pwm_ConfigType* Pwm_ConfigPtr;
 
 #endif /* PWM_H */
 

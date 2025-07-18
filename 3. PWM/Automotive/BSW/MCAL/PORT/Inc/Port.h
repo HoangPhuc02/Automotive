@@ -59,6 +59,12 @@
 /*MACRO TO GET PIN MASK FROM PIN NUMBER*/
 #define PORT_GET_PIN_MASK(PinNum)   (1U << (PinNum))
 
+/* MMacro to get ADC pin*/
+
+
+/* Macro to get PWM pin*/
+
+
 /* Definition of Pin modes DIO, ADC,...*/
 #define PORT_PIN_MODE_DIO       0
 #define PORT_PIN_MODE_ADC       1

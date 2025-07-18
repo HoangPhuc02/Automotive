@@ -86,8 +86,19 @@ static void Port_SetModeADC(const Port_PinConfigType* pinCfg, uint16_t pinMask) 
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AIN; // Chế độ Analog Input
     GPIO_Init(GPIO_Port, &GPIO_InitStruct);
 }
+// TODO turn this to STD_RETURNTYPE
+static void Port_SetModePwm(const Port_PinConfigType* pinCfg, uint16_t pinMask)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
 
+    GPIO_TypeDef* GPIO_Port = PORT_GET_PORT(pinCfg->PortNum);
+    GPIO_InitStruct.GPIO_Pin = pinMask;
+    GPIO_InitStruct.GPIO_Speed = pinCfg->Speed;
 
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_Init(GPIO_Port, &GPIO_InitStruct);
+
+}
 static void Port_ApplyPinConfig(const Port_PinConfigType* pinCfg) {
     uint16_t pinMask = PORT_GET_PIN_MASK(pinCfg->PinNum);
 
@@ -109,6 +120,8 @@ static void Port_ApplyPinConfig(const Port_PinConfigType* pinCfg) {
             Port_SetModeADC(pinCfg, pinMask);
             break;
         case PORT_PIN_MODE_PWM :
+            Port_SetModePwm(pinCfg, pinMask);
+            break;
         case PORT_PIN_MODE_SPI :
         case PORT_PIN_MODE_CAN :
         case PORT_PIN_MODE_LIN :

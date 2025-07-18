@@ -26,16 +26,15 @@
  * @brief PWM Channel Configuration Structure
  * @details Contains configuration for individual PWM channels
  */
-static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] = 
+Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] = 
 {
     /* Channel 0 - TIM1 Channel 1 */
     {
         .ChannelId = PWM_CHANNEL_0,
         .HwUnit = PWM_HW_UNIT_TIM1,
-        .HwChannel = 0,
         .ChannelClass = PWM_VARIABLE_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -50,10 +49,9 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     {
         .ChannelId = PWM_CHANNEL_1,
         .HwUnit = PWM_HW_UNIT_TIM1,
-        .HwChannel = 1,
         .ChannelClass = PWM_VARIABLE_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -68,10 +66,9 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     {
         .ChannelId = PWM_CHANNEL_2,
         .HwUnit = PWM_HW_UNIT_TIM1,
-        .HwChannel = 2,
         .ChannelClass = PWM_VARIABLE_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -86,10 +83,9 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     {
         .ChannelId = PWM_CHANNEL_3,
         .HwUnit = PWM_HW_UNIT_TIM1,
-        .HwChannel = 3,
         .ChannelClass = PWM_VARIABLE_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -104,10 +100,9 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     {
         .ChannelId = PWM_CHANNEL_4,
         .HwUnit = PWM_HW_UNIT_TIM2,
-        .HwChannel = 0,
         .ChannelClass = PWM_FIXED_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -122,10 +117,9 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     {
         .ChannelId = PWM_CHANNEL_5,
         .HwUnit = PWM_HW_UNIT_TIM2,
-        .HwChannel = 1,
         .ChannelClass = PWM_FIXED_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -140,10 +134,9 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     {
         .ChannelId = PWM_CHANNEL_6,
         .HwUnit = PWM_HW_UNIT_TIM2,
-        .HwChannel = 2,
         .ChannelClass = PWM_FIXED_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -158,10 +151,9 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     {
         .ChannelId = PWM_CHANNEL_7,
         .HwUnit = PWM_HW_UNIT_TIM2,
-        .HwChannel = 3,
         .ChannelClass = PWM_FIXED_PERIOD,
-        .DefaultPeriod = PWM_DEFAULT_PERIOD,
-        .DefaultDutyCycle = PWM_DEFAULT_DUTY_CYCLE,
+        .Period = PWM_DEFAULT_PERIOD,
+        .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
@@ -181,12 +173,12 @@ static const Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
  * @brief PWM Hardware Unit Configuration Structure
  * @details Contains configuration for PWM hardware units (timers)
  */
-static const Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] = 
+
+Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] = 
 {
     /* Timer 1 Configuration */
     {
         .HwUnit = PWM_HW_UNIT_TIM1,
-        .TimerInstance = TIM1,
         .Prescaler = PWM_TIM1_PRESCALER,
         .CounterMode = TIM_CounterMode_Up,
         .ClockDivision = TIM_CKD_DIV1,
@@ -201,7 +193,6 @@ static const Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] =
     /* Timer 2 Configuration */
     {
         .HwUnit = PWM_HW_UNIT_TIM2,
-        .TimerInstance = TIM2,
         .Prescaler = PWM_TIM2_PRESCALER,
         .CounterMode = TIM_CounterMode_Up,
         .ClockDivision = TIM_CKD_DIV1,
@@ -216,7 +207,6 @@ static const Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] =
     /* Timer 3 Configuration */
     {
         .HwUnit = PWM_HW_UNIT_TIM3,
-        .TimerInstance = TIM3,
         .Prescaler = PWM_TIM3_PRESCALER,
         .CounterMode = TIM_CounterMode_Up,
         .ClockDivision = TIM_CKD_DIV1,
@@ -231,7 +221,6 @@ static const Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] =
     /* Timer 4 Configuration */
     {
         .HwUnit = PWM_HW_UNIT_TIM4,
-        .TimerInstance = TIM4,
         .Prescaler = PWM_TIM4_PRESCALER,
         .CounterMode = TIM_CounterMode_Up,
         .ClockDivision = TIM_CKD_DIV1,
@@ -316,23 +305,18 @@ Std_ReturnType Pwm_ValidateConfig(const Pwm_ConfigType* ConfigPtr)
                 break;
             }
             
-            /* Check hardware channel */
-            if (ChannelConfig->HwChannel >= PWM_CHANNELS_PER_HW_UNIT)
-            {
-                RetVal = E_NOT_OK;
-                break;
-            }
+
             
             /* Check period range */
-            if ((ChannelConfig->DefaultPeriod < PWM_MIN_PERIOD) || 
-                (ChannelConfig->DefaultPeriod > PWM_MAX_PERIOD))
+            if ((ChannelConfig->Period < PWM_MIN_PERIOD) || 
+                (ChannelConfig->Period > PWM_MAX_PERIOD))
             {
                 RetVal = E_NOT_OK;
                 break;
             }
             
             /* Check duty cycle range */
-            if (ChannelConfig->DefaultDutyCycle > 0x8000)
+            if (ChannelConfig->DutyCycle > 0x8000)
             {
                 RetVal = E_NOT_OK;
                 break;
@@ -348,13 +332,6 @@ Std_ReturnType Pwm_ValidateConfig(const Pwm_ConfigType* ConfigPtr)
                 
                 /* Check hardware unit ID */
                 if (HwUnitConfig->HwUnit != HwUnitIndex)
-                {
-                    RetVal = E_NOT_OK;
-                    break;
-                }
-                
-                /* Check timer instance */
-                if (HwUnitConfig->TimerInstance == NULL_PTR)
                 {
                     RetVal = E_NOT_OK;
                     break;

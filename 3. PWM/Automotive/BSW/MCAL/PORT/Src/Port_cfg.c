@@ -34,6 +34,11 @@ const Port_ConfigType PortCfg_Port = {
  *        - ModeChangeable: 1 = Allow mode change at runtime
  * @note When add more pins, ensure to update PortCfg_PinsCount
  */
+#define DIO_TEST 1
+#define ADC_TEST 2
+#define PWM_TEST 3
+#define TEST_TYPE PWM_TEST
+#if(TEST_TYPE == ADC_TEST)
 const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount] = {
     /* PA0: DIO, Output, Enable Change Direction & Mode runtime, HIGH, no pull */
     {
@@ -153,4 +158,53 @@ const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount] = {
     }
    
 };
-
+#elif(TEST_TYPE == PWM_TEST)
+const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount] = {
+    /* PA0: DIO, Output, Enable Change Direction & Mode runtime, HIGH, no pull */
+    {
+        .PortNum = PORT_ID_A,
+        .PinNum = 6,
+        .Mode = PORT_PIN_MODE_PWM,
+        .Direction = PORT_PIN_IN,
+        .DirectionChangeable = 1,
+        .Level = PORT_PIN_LEVEL_HIGH,
+        .Pull = PORT_PIN_PULL_NONE,
+        .ModeChangeable = 1,
+        .Speed = PORT_PIN_SPEED_10MHZ,
+    },
+    /* PA1: DIO, Input, Disable Change Direction & Mode runtime, pull-up */
+    {
+        .PortNum = PORT_ID_A,
+        .PinNum = 7,
+        .Mode = PORT_PIN_MODE_ADC,
+        .Direction = PORT_PIN_IN,
+        .DirectionChangeable = 1,
+        .Level = PORT_PIN_LEVEL_HIGH,
+        .Pull = PORT_PIN_PULL_NONE,
+        .ModeChangeable = 1,
+        .Speed = PORT_PIN_SPEED_10MHZ,
+    },
+    {
+        .PortNum = PORT_ID_B,
+        .PinNum = 0,
+        .Mode = PORT_PIN_MODE_ADC,
+        .Direction = PORT_PIN_IN,
+        .DirectionChangeable = 1,
+        .Level = PORT_PIN_LEVEL_HIGH,
+        .Pull = PORT_PIN_PULL_NONE,
+        .ModeChangeable = 1,
+        .Speed = PORT_PIN_SPEED_10MHZ,
+    },
+    {
+        .PortNum = PORT_ID_B,
+        .PinNum = 1,
+        .Mode = PORT_PIN_MODE_ADC,
+        .Direction = PORT_PIN_IN,
+        .DirectionChangeable = 1,
+        .Level = PORT_PIN_LEVEL_HIGH,
+        .Pull = PORT_PIN_PULL_NONE,
+        .ModeChangeable = 1,
+        .Speed = PORT_PIN_SPEED_10MHZ,
+    }
+};
+#endif

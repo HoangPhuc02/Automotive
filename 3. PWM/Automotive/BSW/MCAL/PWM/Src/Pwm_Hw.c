@@ -22,17 +22,6 @@
 *                              LOCAL VARIABLES                                         *
 ****************************************************************************************/
 
-/**
- * @brief Hardware unit runtime data
- * @details Stores runtime information for each hardware unit
- */
-static Pwm_HwUnitRuntimeType Pwm_HwUnitRuntime[PWM_MAX_HW_UNITS];
-
-/**
- * @brief Channel runtime data
- * @details Stores runtime information for each PWM channel
- */
-static Pwm_ChannelRuntimeType Pwm_ChannelRuntime[PWM_MAX_CHANNELS];
 
 /****************************************************************************************
 *                              INITIALIZATION FUNCTIONS                               *
@@ -45,7 +34,7 @@ static Pwm_ChannelRuntimeType Pwm_ChannelRuntime[PWM_MAX_CHANNELS];
  * @param[in] ConfigPtr Pointer to hardware unit configuration
  * @return E_OK if initialization successful, E_NOT_OK otherwise
  */
-Std_ReturnType Pwm_Hw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigType* ConfigPtr)
+Std_ReturnType PwmHw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigType* ConfigPtr)
 {
     Std_ReturnType RetVal = E_OK;
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
@@ -59,7 +48,7 @@ Std_ReturnType Pwm_Hw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigTy
     {
         /* Enable timer clock */
         PWM_HW_ENABLE_TIMER_CLOCK(HwUnit);
-        
+        TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(HwUnit);
         /* Initialize timer base configuration */
         TIM_TimeBaseStructure.TIM_Period = ConfigPtr->MaxPeriod - 1;
         TIM_TimeBaseStructure.TIM_Prescaler = ConfigPtr->Prescaler - 1;
@@ -68,24 +57,24 @@ Std_ReturnType Pwm_Hw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigTy
         TIM_TimeBaseStructure.TIM_RepetitionCounter = ConfigPtr->RepetitionCounter;
         
         /* Configure timer */
-        TIM_TimeBaseInit(ConfigPtr->TimerInstance, &TIM_TimeBaseStructure);
-        
-        /* Initialize runtime data */
-        Pwm_HwUnitRuntime[HwUnit].HwUnit = HwUnit;
-        Pwm_HwUnitRuntime[HwUnit].TimerInstance = ConfigPtr->TimerInstance;
-        Pwm_HwUnitRuntime[HwUnit].CurrentPeriod = ConfigPtr->MaxPeriod;
-        Pwm_HwUnitRuntime[HwUnit].IsInitialized = STD_ON;
-        Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_OFF;
-        Pwm_HwUnitRuntime[HwUnit].ActiveChannels = 0;
+        TIM_TimeBaseInit(TIM_Instance, &TIM_TimeBaseStructure);
+
+        // /* Initialize runtime data */
+        // Pwm_HwUnitRuntime[HwUnit].HwUnit = HwUnit;
+        // Pwm_HwUnitRuntime[HwUnit].TimerInstance = ConfigPtr->TimerInstance;
+        // Pwm_HwUnitRuntime[HwUnit].CurrentPeriod = ConfigPtr->MaxPeriod;
+        // Pwm_HwUnitRuntime[HwUnit].IsInitialized = STD_ON;
+        // Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_OFF;
+        // Pwm_HwUnitRuntime[HwUnit].ActiveChannels = 0;
         
         /* Enable ARR preload */
-        TIM_ARRPreloadConfig(ConfigPtr->TimerInstance, ENABLE);
+        TIM_ARRPreloadConfig(TIM_Instance, ENABLE);
         
         /* Enable timer */
-        TIM_Cmd(ConfigPtr->TimerInstance, ENABLE);
+        TIM_Cmd(TIM_Instance, ENABLE);
         
         /* Update runtime state */
-        Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_ON;
+        // Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_ON;
     }
     
     return RetVal;
@@ -97,7 +86,7 @@ Std_ReturnType Pwm_Hw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigTy
  * @param[in] HwUnit Hardware unit identifier
  * @return E_OK if deinitialization successful, E_NOT_OK otherwise
  */
-Std_ReturnType Pwm_Hw_DeInitHwUnit(Pwm_HwUnitType HwUnit)
+Std_ReturnType PwmHw_DeInitHwUnit(Pwm_HwUnitType HwUnit)
 {
     Std_ReturnType RetVal = E_OK;
     
@@ -108,23 +97,24 @@ Std_ReturnType Pwm_Hw_DeInitHwUnit(Pwm_HwUnitType HwUnit)
     }
     else
     {
+        TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(HwUnit);
         /* Disable timer */
-        if (Pwm_HwUnitRuntime[HwUnit].TimerInstance != NULL_PTR)
+        if (TIM_Instance != NULL_PTR)
         {
-            TIM_Cmd(Pwm_HwUnitRuntime[HwUnit].TimerInstance, DISABLE);
-            TIM_DeInit(Pwm_HwUnitRuntime[HwUnit].TimerInstance);
+            TIM_Cmd(TIM_Instance, DISABLE);
+            TIM_DeInit(TIM_Instance);
         }
         
         /* Disable timer clock */
         PWM_HW_DISABLE_TIMER_CLOCK(HwUnit);
         
         /* Reset runtime data */
-        Pwm_HwUnitRuntime[HwUnit].HwUnit = PWM_HW_UNIT_INVALID;
-        Pwm_HwUnitRuntime[HwUnit].TimerInstance = NULL_PTR;
-        Pwm_HwUnitRuntime[HwUnit].CurrentPeriod = 0;
-        Pwm_HwUnitRuntime[HwUnit].IsInitialized = STD_OFF;
-        Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_OFF;
-        Pwm_HwUnitRuntime[HwUnit].ActiveChannels = 0;
+        // Pwm_HwUnitRuntime[HwUnit].HwUnit = PWM_HW_UNIT_INVALID;
+        // Pwm_HwUnitRuntime[HwUnit].TimerInstance = NULL_PTR;
+        // Pwm_HwUnitRuntime[HwUnit].CurrentPeriod = 0;
+        // Pwm_HwUnitRuntime[HwUnit].IsInitialized = STD_OFF;
+        // Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_OFF;
+        // Pwm_HwUnitRuntime[HwUnit].ActiveChannels = 0;
     }
     
     return RetVal;
@@ -137,15 +127,12 @@ Std_ReturnType Pwm_Hw_DeInitHwUnit(Pwm_HwUnitType HwUnit)
  * @param[in] ChannelConfig Pointer to channel configuration
  * @return E_OK if initialization successful, E_NOT_OK otherwise
  */
-Std_ReturnType Pwm_Hw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelConfigType* ChannelConfig)
+Std_ReturnType PwmHw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelConfigType* ChannelConfig)
 {
     Std_ReturnType RetVal = E_OK;
     TIM_OCInitTypeDef TIM_OCInitStructure;
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_TypeDef* GPIOx;
-    uint16_t GPIO_Pin;
-    uint16_t TIM_Channel;
-    
+    Pwm_HwUnitType HwUnitId;
+
     /* Validate parameters */
     if ((ChannelId >= PWM_MAX_CHANNELS) || (ChannelConfig == NULL_PTR))
     {
@@ -153,61 +140,41 @@ Std_ReturnType Pwm_Hw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelCo
     }
     else
     {
-        /* Get GPIO port and pin */
-        GPIOx = PWM_HW_GET_GPIO_PORT(ChannelConfig->HwUnit);
-        GPIO_Pin = PWM_HW_GET_GPIO_PIN(ChannelConfig->HwUnit, ChannelConfig->HwChannel);
-        
-        /* Enable GPIO clock */
-        if (GPIOx == GPIOA)
-        {
-            RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-        }
-        else if (GPIOx == GPIOB)
-        {
-            RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-        }
-        else if (GPIOx == GPIOC)
-        {
-            RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
-        }
-        
-        /* Configure GPIO pin */
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin;
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-        GPIO_Init(GPIOx, &GPIO_InitStructure);
-        
+
         /* Get timer channel */
-        TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelConfig->HwChannel);
-        
+        HwUnitId = ChannelConfig->HwUnit;
+
+        uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+        TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(HwUnitId);
+
         /* Configure timer output compare */
         TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-        TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+        TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;   // default
         TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Disable;
-        TIM_OCInitStructure.TIM_Pulse = ChannelConfig->DefaultDutyCycle;
+        TIM_OCInitStructure.TIM_Pulse = ChannelConfig->DutyCycle;
         TIM_OCInitStructure.TIM_OCPolarity = (ChannelConfig->Polarity == PWM_HIGH) ? TIM_OCPolarity_High : TIM_OCPolarity_Low;
         TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
         TIM_OCInitStructure.TIM_OCIdleState = (ChannelConfig->IdleState == PWM_HIGH) ? TIM_OCIdleState_Set : TIM_OCIdleState_Reset;
         TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
         
         /* Initialize output compare based on channel */
-        switch (ChannelConfig->HwChannel)
+        switch (TIM_Channel)
         {
-            case 0:
-                TIM_OC1Init(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, &TIM_OCInitStructure);
-                TIM_OC1PreloadConfig(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, TIM_OCPreload_Enable);
+            case TIM_Channel_1:
+                TIM_OC1Init(TIM_Instance, &TIM_OCInitStructure);
+                TIM_OC1PreloadConfig(TIM_Instance, TIM_OCPreload_Enable);
                 break;
-            case 1:
-                TIM_OC2Init(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, &TIM_OCInitStructure);
-                TIM_OC2PreloadConfig(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, TIM_OCPreload_Enable);
+            case TIM_Channel_2:
+                TIM_OC2Init(TIM_Instance, &TIM_OCInitStructure);
+                TIM_OC2PreloadConfig(TIM_Instance, TIM_OCPreload_Enable);
                 break;
-            case 2:
-                TIM_OC3Init(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, &TIM_OCInitStructure);
-                TIM_OC3PreloadConfig(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, TIM_OCPreload_Enable);
+            case TIM_Channel_3:
+                TIM_OC3Init(TIM_Instance, &TIM_OCInitStructure);
+                TIM_OC3PreloadConfig(TIM_Instance, TIM_OCPreload_Enable);
                 break;
-            case 3:
-                TIM_OC4Init(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, &TIM_OCInitStructure);
-                TIM_OC4PreloadConfig(Pwm_HwUnitRuntime[ChannelConfig->HwUnit].TimerInstance, TIM_OCPreload_Enable);
+            case TIM_Channel_4:
+                TIM_OC4Init(TIM_Instance, &TIM_OCInitStructure);
+                TIM_OC4PreloadConfig(TIM_Instance, TIM_OCPreload_Enable);
                 break;
             default:
                 RetVal = E_NOT_OK;
@@ -217,19 +184,9 @@ Std_ReturnType Pwm_Hw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelCo
         if (RetVal == E_OK)
         {
             /* Initialize channel runtime data */
-            Pwm_ChannelRuntime[ChannelId].ChannelId = ChannelId;
-            Pwm_ChannelRuntime[ChannelId].HwUnit = ChannelConfig->HwUnit;
-            Pwm_ChannelRuntime[ChannelId].HwChannel = ChannelConfig->HwChannel;
-            Pwm_ChannelRuntime[ChannelId].CurrentPeriod = ChannelConfig->DefaultPeriod;
-            Pwm_ChannelRuntime[ChannelId].CurrentDutyCycle = ChannelConfig->DefaultDutyCycle;
-            Pwm_ChannelRuntime[ChannelId].CurrentState = PWM_LOW;
-            Pwm_ChannelRuntime[ChannelId].IsInitialized = STD_ON;
-            Pwm_ChannelRuntime[ChannelId].IsRunning = STD_OFF;
-            Pwm_ChannelRuntime[ChannelId].NotificationEnabled = ChannelConfig->NotificationEnabled;
+            Pwm_ChannelConfig[ChannelId].NotificationEnabled = FALSE;
             
-            /* Update hardware unit active channels */
-            Pwm_HwUnitRuntime[ChannelConfig->HwUnit].ActiveChannels |= (1U << ChannelConfig->HwChannel);
-            
+
             /* Enable main output for advanced timers */
             if (ChannelConfig->HwUnit == PWM_HW_UNIT_TIM1)
             {
@@ -244,47 +201,50 @@ Std_ReturnType Pwm_Hw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelCo
 /****************************************************************************************
 *                              DUTY CYCLE CONTROL FUNCTIONS                          *
 ****************************************************************************************/
-
+#if (PWM_SET_DUTY_CYCLE_API == STD_ON)
 /**
  * @brief Sets PWM duty cycle for a channel
  * @details Updates the compare value for the specified channel
  * @param[in] ChannelId Channel identifier
  * @param[in] DutyCycle New duty cycle value (0x0000 to 0x8000)
  * @return E_OK if successful, E_NOT_OK otherwise
+ * @note validate in api  
  */
-Std_ReturnType Pwm_Hw_SetDutyCycle(Pwm_ChannelType ChannelId, uint16 DutyCycle)
+Std_ReturnType PwmHw_SetDutyCycle(Pwm_ChannelType ChannelId, uint16 DutyCycle)
 {
     Std_ReturnType RetVal = E_OK;
     uint16 CompareValue;
-    
+    uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+    TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
     /* Validate parameters */
     if ((ChannelId >= PWM_MAX_CHANNELS) || (DutyCycle > 0x8000))
-    {
-        RetVal = E_NOT_OK;
-    }
-    else if (Pwm_ChannelRuntime[ChannelId].IsInitialized == STD_OFF)
     {
         RetVal = E_NOT_OK;
     }
     else
     {
         /* Calculate compare value */
-        CompareValue = (uint16)((((uint32)DutyCycle) * Pwm_ChannelRuntime[ChannelId].CurrentPeriod) >> 15);
+        //  AbsoluteDutyCycle = ((uint32)AbsolutePeriodTime * RelativeDutyCycle) >> 15;
+        // shift bits to left means divide it by 2^15
+        // when u use duty cycle as max 0x8000 when u shift it will like 2^15 / 2^15 = 1 or 100%
+        // when u want 50% which 0x4000 / 2^15 = 1/2 
+        CompareValue = (uint16)(((uint32)(DutyCycle) * (uint32)(Pwm_ChannelConfig[ChannelId].Period)) >> 15);
         
+        // TODO fix this 
         /* Update compare value based on channel */
-        switch (Pwm_ChannelRuntime[ChannelId].HwChannel)
+        switch (TIM_Channel)
         {
-            case 0:
-                TIM_SetCompare1(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_1:
+                TIM_SetCompare1(TIM_Instance, CompareValue);
                 break;
-            case 1:
-                TIM_SetCompare2(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_2:
+                TIM_SetCompare2(TIM_Instance, CompareValue);
                 break;
-            case 2:
-                TIM_SetCompare3(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_3:
+                TIM_SetCompare3(TIM_Instance, CompareValue);
                 break;
-            case 3:
-                TIM_SetCompare4(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_4:
+                TIM_SetCompare4(TIM_Instance, CompareValue);
                 break;
             default:
                 RetVal = E_NOT_OK;
@@ -294,27 +254,16 @@ Std_ReturnType Pwm_Hw_SetDutyCycle(Pwm_ChannelType ChannelId, uint16 DutyCycle)
         if (RetVal == E_OK)
         {
             /* Update runtime data */
-            Pwm_ChannelRuntime[ChannelId].CurrentDutyCycle = DutyCycle;
-            
-            /* Update current state based on duty cycle */
-            if (DutyCycle == 0)
-            {
-                Pwm_ChannelRuntime[ChannelId].CurrentState = PWM_LOW;
-            }
-            else if (DutyCycle == 0x8000)
-            {
-                Pwm_ChannelRuntime[ChannelId].CurrentState = PWM_HIGH;
-            }
-            else
-            {
-                Pwm_ChannelRuntime[ChannelId].CurrentState = PWM_LOW; /* PWM mode */
-            }
+            Pwm_ChannelConfig[ChannelId].DutyCycle = DutyCycle;
         }
     }
     
     return RetVal;
 }
+#endif
 
+
+#if (PWM_SET_PERIOD_AND_DUTY_API == STD_ON)
 /**
  * @brief Sets PWM period and duty cycle for a channel
  * @details Updates both period and duty cycle for variable period channels
@@ -323,7 +272,7 @@ Std_ReturnType Pwm_Hw_SetDutyCycle(Pwm_ChannelType ChannelId, uint16 DutyCycle)
  * @param[in] DutyCycle New duty cycle value (0x0000 to 0x8000)
  * @return E_OK if successful, E_NOT_OK otherwise
  */
-Std_ReturnType Pwm_Hw_SetPeriodAndDuty(Pwm_ChannelType ChannelId, Pwm_PeriodType Period, uint16 DutyCycle)
+Std_ReturnType PwmHw_SetPeriodAndDuty(Pwm_ChannelType ChannelId, Pwm_PeriodType Period, uint16 DutyCycle)
 {
     Std_ReturnType RetVal = E_OK;
     uint16 CompareValue;
@@ -333,32 +282,30 @@ Std_ReturnType Pwm_Hw_SetPeriodAndDuty(Pwm_ChannelType ChannelId, Pwm_PeriodType
     {
         RetVal = E_NOT_OK;
     }
-    else if (Pwm_ChannelRuntime[ChannelId].IsInitialized == STD_OFF)
-    {
-        RetVal = E_NOT_OK;
-    }
     else
     {
+        uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+        TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
         /* Update timer period */
-        TIM_SetAutoreload(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, Period - 1);
+        TIM_SetAutoreload(TIM_Instance, Period - 1);
         
         /* Calculate compare value */
-        CompareValue = (uint16)((((uint32)DutyCycle) * Period) >> 15);
+        CompareValue = (uint16)(((uint32)(DutyCycle) * (uint32)(Pwm_ChannelConfig[ChannelId].Period)) >> 15);
         
         /* Update compare value based on channel */
-        switch (Pwm_ChannelRuntime[ChannelId].HwChannel)
+        switch (TIM_Channel)
         {
-            case 0:
-                TIM_SetCompare1(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_1:
+                TIM_SetCompare1(TIM_Instance, CompareValue);
                 break;
-            case 1:
-                TIM_SetCompare2(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_2:
+                TIM_SetCompare2(TIM_Instance, CompareValue);
                 break;
-            case 2:
-                TIM_SetCompare3(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_3:
+                TIM_SetCompare3(TIM_Instance, CompareValue);
                 break;
-            case 3:
-                TIM_SetCompare4(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, CompareValue);
+            case TIM_Channel_4:
+                TIM_SetCompare4(TIM_Instance, CompareValue);
                 break;
             default:
                 RetVal = E_NOT_OK;
@@ -368,29 +315,15 @@ Std_ReturnType Pwm_Hw_SetPeriodAndDuty(Pwm_ChannelType ChannelId, Pwm_PeriodType
         if (RetVal == E_OK)
         {
             /* Update runtime data */
-            Pwm_ChannelRuntime[ChannelId].CurrentPeriod = Period;
-            Pwm_ChannelRuntime[ChannelId].CurrentDutyCycle = DutyCycle;
-            Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].CurrentPeriod = Period;
-            
-            /* Update current state based on duty cycle */
-            if (DutyCycle == 0)
-            {
-                Pwm_ChannelRuntime[ChannelId].CurrentState = PWM_LOW;
-            }
-            else if (DutyCycle == 0x8000)
-            {
-                Pwm_ChannelRuntime[ChannelId].CurrentState = PWM_HIGH;
-            }
-            else
-            {
-                Pwm_ChannelRuntime[ChannelId].CurrentState = PWM_LOW; /* PWM mode */
-            }
+            Pwm_ChannelConfig[ChannelId].Period = Period;
+            Pwm_ChannelConfig[ChannelId].DutyCycle = DutyCycle;
+            Pwm_HwUnitConfig[Pwm_ChannelConfig[ChannelId].HwUnit].MaxPeriod = Period;
         }
     }
     
     return RetVal;
 }
-
+#endif
 /****************************************************************************************
 *                              OUTPUT CONTROL FUNCTIONS                               *
 ****************************************************************************************/
@@ -401,7 +334,7 @@ Std_ReturnType Pwm_Hw_SetPeriodAndDuty(Pwm_ChannelType ChannelId, Pwm_PeriodType
  * @param[in] ChannelId Channel identifier
  * @return E_OK if successful, E_NOT_OK otherwise
  */
-Std_ReturnType Pwm_Hw_SetOutputToIdle(Pwm_ChannelType ChannelId)
+Std_ReturnType PwmHw_SetOutputToIdle(Pwm_ChannelType ChannelId)
 {
     Std_ReturnType RetVal = E_OK;
     
@@ -410,37 +343,19 @@ Std_ReturnType Pwm_Hw_SetOutputToIdle(Pwm_ChannelType ChannelId)
     {
         RetVal = E_NOT_OK;
     }
-    else if (Pwm_ChannelRuntime[ChannelId].IsInitialized == STD_OFF)
-    {
-        RetVal = E_NOT_OK;
-    }
     else
     {
+        uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+        TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
         /* Disable output compare based on channel */
-        switch (Pwm_ChannelRuntime[ChannelId].HwChannel)
-        {
-            case 0:
-                TIM_CCxCmd(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_Channel_1, TIM_CCx_Disable);
-                break;
-            case 1:
-                TIM_CCxCmd(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_Channel_2, TIM_CCx_Disable);
-                break;
-            case 2:
-                TIM_CCxCmd(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_Channel_3, TIM_CCx_Disable);
-                break;
-            case 3:
-                TIM_CCxCmd(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_Channel_4, TIM_CCx_Disable);
-                break;
-            default:
-                RetVal = E_NOT_OK;
-                break;
-        }
+        TIM_CCxCmd(TIM_Instance, TIM_Channel, TIM_CCx_Disable);
         
-        if (RetVal == E_OK)
-        {
-            /* Update runtime state */
-            Pwm_ChannelRuntime[ChannelId].IsRunning = STD_OFF;
-        }
+        
+        // if (RetVal == E_OK)
+        // {
+        //     /* Update runtime state */
+        //     Pwm_ChannelConfig[ChannelId].IsRunning = STD_OFF;
+        // }
     }
     
     return RetVal;
@@ -452,17 +367,25 @@ Std_ReturnType Pwm_Hw_SetOutputToIdle(Pwm_ChannelType ChannelId)
  * @param[in] ChannelId Channel identifier
  * @return PWM_HIGH or PWM_LOW
  */
-Pwm_OutputStateType Pwm_Hw_GetOutputState(Pwm_ChannelType ChannelId)
+Pwm_OutputStateType PwmHw_GetOutputState(Pwm_ChannelType ChannelId)
 {
-    Pwm_OutputStateType OutputState = PWM_LOW;
-    
-    /* Validate parameters */
-    if ((ChannelId < PWM_MAX_CHANNELS) && (Pwm_ChannelRuntime[ChannelId].IsInitialized == STD_ON))
+    uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+    TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
+    uint16_t compare_value;
+    Pwm_OutputStateType RetVal;
+    switch (TIM_Channel)
     {
-        OutputState = Pwm_ChannelRuntime[ChannelId].CurrentState;
+        case TIM_Channel_1: compare_value = TIM_Instance->CCR1; break;
+        case TIM_Channel_2: compare_value = TIM_Instance->CCR2; break;
+        case TIM_Channel_3: compare_value = TIM_Instance->CCR3; break;
+        case TIM_Channel_4: compare_value = TIM_Instance->CCR4; break;
+        default: return PWM_LOW;
     }
-    
-    return OutputState;
+    if(Pwm_HwUnitConfig[Pwm_ChannelConfig[ChannelId].HwUnit].MaxPeriod == 1)
+        RetVal = (compare_value > 0) ? PWM_HIGH : PWM_LOW;
+    else
+        RetVal = (compare_value == 0) ? PWM_LOW : PWM_HIGH;
+    return RetVal;
 }
 
 /****************************************************************************************
@@ -476,35 +399,42 @@ Pwm_OutputStateType Pwm_Hw_GetOutputState(Pwm_ChannelType ChannelId)
  * @param[in] Notification Notification edge type
  * @return E_OK if successful, E_NOT_OK otherwise
  */
-Std_ReturnType Pwm_Hw_EnableNotification(Pwm_ChannelType ChannelId, Pwm_EdgeNotificationType Notification)
+Std_ReturnType PwmHw_EnableNotification(Pwm_ChannelType ChannelId, Pwm_EdgeNotificationType Notification)
 {
     Std_ReturnType RetVal = E_OK;
-    
+    uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+    TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
+    // check rising by using update or cc-capture compare ccr
     /* Validate parameters */
     if (ChannelId >= PWM_MAX_CHANNELS)
     {
         RetVal = E_NOT_OK;
     }
-    else if (Pwm_ChannelRuntime[ChannelId].IsInitialized == STD_OFF)
-    {
-        RetVal = E_NOT_OK;
-    }
     else
     {
-        /* Enable interrupt based on channel */
-        switch (Pwm_ChannelRuntime[ChannelId].HwChannel)
+        if(Notification == PWM_RISING_EDGE || Notification == PWM_BOTH_EDGES)
         {
-            case 0:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC1, ENABLE);
+
+        }
+        if(Notification == PWM_FALLING_EDGE || Notification == PWM_BOTH_EDGES)
+        {
+
+        }
+
+        /* Enable interrupt based on channel */
+        switch (TIM_Channel)
+        {
+            case TIM_Channel_1:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC1, ENABLE);
                 break;
-            case 1:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC2, ENABLE);
+            case TIM_Channel_2:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC2, ENABLE);
                 break;
-            case 2:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC3, ENABLE);
+            case TIM_Channel_3:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC3, ENABLE);
                 break;
-            case 3:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC4, ENABLE);
+            case TIM_Channel_4:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC4, ENABLE);
                 break;
             default:
                 RetVal = E_NOT_OK;
@@ -514,7 +444,7 @@ Std_ReturnType Pwm_Hw_EnableNotification(Pwm_ChannelType ChannelId, Pwm_EdgeNoti
         if (RetVal == E_OK)
         {
             /* Update runtime data */
-            Pwm_ChannelRuntime[ChannelId].NotificationEnabled = STD_ON;
+            Pwm_ChannelConfig[ChannelId].NotificationEnabled = STD_ON;
         }
     }
     
@@ -527,35 +457,32 @@ Std_ReturnType Pwm_Hw_EnableNotification(Pwm_ChannelType ChannelId, Pwm_EdgeNoti
  * @param[in] ChannelId Channel identifier
  * @return E_OK if successful, E_NOT_OK otherwise
  */
-Std_ReturnType Pwm_Hw_DisableNotification(Pwm_ChannelType ChannelId)
+Std_ReturnType PwmHw_DisableNotification(Pwm_ChannelType ChannelId)
 {
     Std_ReturnType RetVal = E_OK;
-    
+        uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+    TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
     /* Validate parameters */
     if (ChannelId >= PWM_MAX_CHANNELS)
-    {
-        RetVal = E_NOT_OK;
-    }
-    else if (Pwm_ChannelRuntime[ChannelId].IsInitialized == STD_OFF)
     {
         RetVal = E_NOT_OK;
     }
     else
     {
         /* Disable interrupt based on channel */
-        switch (Pwm_ChannelRuntime[ChannelId].HwChannel)
+        switch (TIM_Channel)
         {
-            case 0:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC1, DISABLE);
+            case TIM_Channel_1:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC1, DISABLE);
                 break;
-            case 1:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC2, DISABLE);
+            case TIM_Channel_2:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC2, DISABLE);
                 break;
-            case 2:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC3, DISABLE);
+            case TIM_Channel_3:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC3, DISABLE);
                 break;
-            case 3:
-                TIM_ITConfig(Pwm_HwUnitRuntime[Pwm_ChannelRuntime[ChannelId].HwUnit].TimerInstance, TIM_IT_CC4, DISABLE);
+            case TIM_Channel_4:
+                TIM_ITConfig(TIM_Instance, TIM_IT_CC4, DISABLE);
                 break;
             default:
                 RetVal = E_NOT_OK;
@@ -565,47 +492,11 @@ Std_ReturnType Pwm_Hw_DisableNotification(Pwm_ChannelType ChannelId)
         if (RetVal == E_OK)
         {
             /* Update runtime data */
-            Pwm_ChannelRuntime[ChannelId].NotificationEnabled = STD_OFF;
+            Pwm_ChannelConfig[ChannelId].NotificationEnabled = FALSE;
         }
     }
     
     return RetVal;
 }
 
-/****************************************************************************************
-*                              RUNTIME DATA ACCESS FUNCTIONS                          *
-****************************************************************************************/
 
-/**
- * @brief Gets channel runtime data
- * @param[in] ChannelId Channel identifier
- * @return Pointer to channel runtime data or NULL_PTR if not found
- */
-const Pwm_ChannelRuntimeType* Pwm_Hw_GetChannelRuntime(Pwm_ChannelType ChannelId)
-{
-    const Pwm_ChannelRuntimeType* RuntimePtr = NULL_PTR;
-    
-    if ((ChannelId < PWM_MAX_CHANNELS) && (Pwm_ChannelRuntime[ChannelId].IsInitialized == STD_ON))
-    {
-        RuntimePtr = &Pwm_ChannelRuntime[ChannelId];
-    }
-    
-    return RuntimePtr;
-}
-
-/**
- * @brief Gets hardware unit runtime data
- * @param[in] HwUnit Hardware unit identifier
- * @return Pointer to hardware unit runtime data or NULL_PTR if not found
- */
-const Pwm_HwUnitRuntimeType* Pwm_Hw_GetHwUnitRuntime(Pwm_HwUnitType HwUnit)
-{
-    const Pwm_HwUnitRuntimeType* RuntimePtr = NULL_PTR;
-    
-    if ((HwUnit < PWM_MAX_HW_UNITS) && (Pwm_HwUnitRuntime[HwUnit].IsInitialized == STD_ON))
-    {
-        RuntimePtr = &Pwm_HwUnitRuntime[HwUnit];
-    }
-    
-    return RuntimePtr;
-}

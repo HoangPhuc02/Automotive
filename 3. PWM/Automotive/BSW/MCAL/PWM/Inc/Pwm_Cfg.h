@@ -32,6 +32,7 @@
 /****************************************************************************************
 *                              FEATURE CONFIGURATION                                   *
 ****************************************************************************************/
+#define PWM_SET_DUTY_CYCLE_API      STD_ON /*!< Enable/disable Pwm_SetDutyCycle API */
 #define PWM_SET_PERIOD_AND_DUTY_API STD_ON  /*!< Enable/disable Pwm_SetPeriodAndDuty API */
 #define PWM_SET_OUTPUT_TO_IDLE_API  STD_ON  /*!< Enable/disable Pwm_SetOutputToIdle API */
 #define PWM_GET_OUTPUT_STATE_API    STD_ON  /*!< Enable/disable Pwm_GetOutputState API */
@@ -41,8 +42,8 @@
 /****************************************************************************************
 *                              SYSTEM CONFIGURATION                                    *
 ****************************************************************************************/
-#define PWM_MAX_CHANNELS            8       /*!< Maximum number of PWM channels */
-#define PWM_MAX_HW_UNITS            4       /*!< Maximum number of hardware units */
+// #define PWM_MAX_CHANNELS            8       /*!< Maximum number of PWM channels */
+// #define PWM_MAX_HW_UNITS            4       /*!< Maximum number of hardware units */
 #define PWM_SYSTEM_FREQUENCY        72000000UL /*!< System frequency in Hz */
 
 /****************************************************************************************
@@ -104,6 +105,14 @@
 #define PWM_CHANNEL_5               5       /*!< PWM Channel 5 */
 #define PWM_CHANNEL_6               6       /*!< PWM Channel 6 */
 #define PWM_CHANNEL_7               7       /*!< PWM Channel 7 */
+#define PWM_CHANNEL_8               8       /*!< PWM Channel 8 */
+#define PWM_CHANNEL_9               9       /*!< PWM Channel 9 */
+#define PWM_CHANNEL_10              10      /*!< PWM Channel 10 */
+#define PWM_CHANNEL_11              11      /*!< PWM Channel 11 */
+#define PWM_CHANNEL_12              12      /*!< PWM Channel 12 */
+#define PWM_CHANNEL_13              13      /*!< PWM Channel 13 */
+#define PWM_CHANNEL_14              14      /*!< PWM Channel 14 */
+#define PWM_CHANNEL_15              15      /*!< PWM Channel 15 */
 
 /* PWM Hardware Unit Constants */
 #define PWM_HW_UNIT_INVALID         0xFF    /*!< Invalid hardware unit */
@@ -132,26 +141,38 @@
 *                              EXTERNAL DECLARATIONS                                   *
 ****************************************************************************************/
 extern const Pwm_ConfigType Pwm_Config;
-
+extern Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS];
+extern Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] ;
 /****************************************************************************************
 *                              CONFIGURATION VALIDATION FUNCTIONS                     *
 ****************************************************************************************/
-extern Std_ReturnType Pwm_ValidateConfig(const Pwm_ConfigType* ConfigPtr);
-extern const Pwm_ChannelConfigType* Pwm_GetChannelConfig(Pwm_ChannelType ChannelId);
-extern const Pwm_HwUnitConfigType* Pwm_GetHwUnitConfig(Pwm_HwUnitType HwUnit);
+Std_ReturnType Pwm_ValidateConfig(const Pwm_ConfigType* ConfigPtr);
+const Pwm_ChannelConfigType* Pwm_GetChannelConfig(Pwm_ChannelType ChannelId);
+const Pwm_HwUnitConfigType* Pwm_GetHwUnitConfig(Pwm_HwUnitType HwUnit);
 
 /****************************************************************************************
 *                              CALLBACK FUNCTION DECLARATIONS                         *
 ****************************************************************************************/
 /* Channel notification callbacks */
-void Pwm_Channel0_Notification(void);
-void Pwm_Channel1_Notification(void);
-void Pwm_Channel2_Notification(void);
-void Pwm_Channel3_Notification(void);
-void Pwm_Channel4_Notification(void);
-void Pwm_Channel5_Notification(void);
-void Pwm_Channel6_Notification(void);
-void Pwm_Channel7_Notification(void);
+void Pwm_Tim1_Channel1_Notification(uint16 TIM_IT);
+void Pwm_Tim1_Channel2_Notification(uint16 TIM_IT);
+void Pwm_Tim1_Channel3_Notification(uint16 TIM_IT);
+void Pwm_Tim1_Channel4_Notification(uint16 TIM_IT);
+
+void Pwm_Tim2_Channel1_Notification(uint16 TIM_IT);
+void Pwm_Tim2_Channel2_Notification(uint16 TIM_IT);
+void Pwm_Tim2_Channel3_Notification(uint16 TIM_IT);
+void Pwm_Tim2_Channel4_Notification(uint16 TIM_IT);
+
+void Pwm_Tim3_Channel1_Notification(uint16 TIM_IT);
+void Pwm_Tim3_Channel2_Notification(uint16 TIM_IT);
+void Pwm_Tim3_Channel3_Notification(uint16 TIM_IT);
+void Pwm_Tim3_Channel4_Notification(uint16 TIM_IT);
+
+void Pwm_Tim4_Channel1_Notification(uint16 TIM_IT);
+void Pwm_Tim4_Channel2_Notification(uint16 TIM_IT);
+void Pwm_Tim4_Channel3_Notification(uint16 TIM_IT);
+void Pwm_Tim4_Channel4_Notification(uint16 TIM_IT);
 
 /* Error callback */
 void Pwm_ErrorCallback(Pwm_ChannelType ChannelId, uint8 ErrorCode);

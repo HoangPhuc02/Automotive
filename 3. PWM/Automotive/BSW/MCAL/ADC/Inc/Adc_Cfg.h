@@ -29,7 +29,7 @@
 *                              CONFIGURATION PARAMETERS                                *
 ****************************************************************************************/
 /* UNUSED - Result alignment not used in source code */
-/* #define ADC_RESULT_ALIGNMENT        ADC_ALIGN_RIGHT */
+// #define ADC_RESULT_ALIGNMENT        ADC_ALIGN_RIGHT */
 
 /* System Limits */
 #define ADC_MAX_GROUPS              10      /*!< Maximum number of ADC groups */
@@ -44,26 +44,26 @@
 
 /* Real-time Safety Configuration */
 /* UNUSED - Max ISR processing time not used in source code */
-/* #define ADC_MAX_ISR_PROCESSING_TIME_US  50  /*!< Maximum ISR processing time in microseconds */ 
+// #define ADC_MAX_ISR_PROCESSING_TIME_US  50  /*!< Maximum ISR processing time in microseconds */ 
 #define ADC_ENABLE_ISR_MONITORING   STD_OFF  /*!< Enable ISR execution time monitoring */
 
 /* Feature Configuration */
 /* UNUSED - Feature flags not used in source code */
 #define ADC_ENABLE_QUEUING          STD_ON  /*!< Enable group queuing support */ 
-/* #define ADC_ENABLE_PRIORITY         STD_OFF /*!< Enable priority-based interruption */ 
+// #define ADC_ENABLE_PRIORITY         STD_OFF /*!< Enable priority-based interruption */ 
 #define ADC_ENABLE_DMA              STD_ON  /*!< Enable DMA support */ 
 #define ADC_DMA_AVAILABLE           STD_ON  /*!< ADC DMA available*/
 #define ADC_DMA_NOT_AVAILABLE       STD_OFF /*!< ADC DMA not available*/
-/* #define ADC_ENABLE_STREAMING        STD_ON  /*!< Enable streaming mode */ 
-/* #define ADC_ENABLE_NOTIFICATIONS    STD_ON  /*!< Enable notification callbacks */ 
-/* #define ADC_ENABLE_LIMIT_CHECKING   STD_OFF /*!< Enable limit checking */ 
-/* #define ADC_ENABLE_POWER_MANAGEMENT STD_OFF /*!< Enable power management */ 
+// #define ADC_ENABLE_STREAMING        STD_ON  /*!< Enable streaming mode */ 
+// #define ADC_ENABLE_NOTIFICATIONS    STD_ON  /*!< Enable notification callbacks */ 
+// #define ADC_ENABLE_LIMIT_CHECKING   STD_OFF /*!< Enable limit checking */ 
+// #define ADC_ENABLE_POWER_MANAGEMENT STD_OFF /*!< Enable power management */ 
 
 /* Development Configuration */
 // TODO turn on if write det driver
 #define ADC_DEV_ERROR_DETECT        STD_OFF  /*!< Enable development error detection */
 /* UNUSED - Runtime checks not used in source code */
-/* #define ADC_ENABLE_RUNTIME_CHECKS   STD_ON  /*!< Enable runtime parameter checks */ 
+// #define ADC_ENABLE_RUNTIME_CHECKS   STD_ON  /*!< Enable runtime parameter checks */ 
 #define ADC_ENABLE_DEBUG_SUPPORT    STD_OFF  /*!< Enable debug support */
 
 /****************************************************************************************
@@ -71,21 +71,21 @@
 ****************************************************************************************/
 /* UNUSED - Hardware configuration not used in source code */
 /* ADC1 Configuration */
-/* #define ADC1_ENABLED                STD_ON */
-/* #define ADC1_DMA_ENABLED            STD_ON */
-/* #define ADC1_DMA_CHANNEL            DMA1_Channel1 */
-/* #define ADC1_MAX_GROUPS             5 */
-/* #define ADC1_QUEUE_SIZE             ADC_DEFAULT_QUEUE_SIZE */
+// #define ADC1_ENABLED                STD_ON */
+// #define ADC1_DMA_ENABLED            STD_ON */
+// #define ADC1_DMA_CHANNEL            DMA1_Channel1 */
+// #define ADC1_MAX_GROUPS             5 */
+// #define ADC1_QUEUE_SIZE             ADC_DEFAULT_QUEUE_SIZE */
 
 /* ADC2 Configuration */
-/* #define ADC2_ENABLED                STD_OFF */
-/* #define ADC2_DMA_ENABLED            STD_OFF */
-/* #define ADC2_DMA_CHANNEL            NULL */
-/* #define ADC2_MAX_GROUPS             5 */
-/* #define ADC2_QUEUE_SIZE             ADC_DEFAULT_QUEUE_SIZE */
+// #define ADC2_ENABLED                STD_OFF */
+// #define ADC2_DMA_ENABLED            STD_OFF */
+// #define ADC2_DMA_CHANNEL            NULL */
+// #define ADC2_MAX_GROUPS             5 */
+// #define ADC2_QUEUE_SIZE             ADC_DEFAULT_QUEUE_SIZE */
 
 /* Clock Configuration */
-/*#define ADC_CLOCK_PRESCALER         ADC_PCLK2_Div6  /*!< ADC clock prescaler */ 
+// #define ADC_CLOCK_PRESCALER         ADC_PCLK2_Div6  /*!< ADC clock prescaler */ 
 #define ADC_SAMPLING_TIME_DEFAULT   ADC_SampleTime_28Cycles5  /*!< Default sampling time */
 
 /****************************************************************************************
@@ -93,30 +93,30 @@
 ****************************************************************************************/
 /* UNUSED - Safety configuration not used in source code */
 /* Timeout Configuration */
-/* #define ADC_CONVERSION_TIMEOUT_MS   100     /*!< Conversion timeout in milliseconds */ 
-/* #define ADC_INIT_TIMEOUT_MS         50      /*!< Initialization timeout in milliseconds */ 
-/* #define ADC_DEINIT_TIMEOUT_MS       50      /*!< De-initialization timeout in milliseconds */ 
+// #define ADC_CONVERSION_TIMEOUT_MS   100     /*!< Conversion timeout in milliseconds */ 
+// #define ADC_INIT_TIMEOUT_MS         50      /*!< Initialization timeout in milliseconds */ 
+// #define ADC_DEINIT_TIMEOUT_MS       50      /*!< De-initialization timeout in milliseconds */ 
 
 /* Error Recovery Configuration */
-/* #define ADC_ENABLE_ERROR_RECOVERY   STD_ON  /*!< Enable automatic error recovery */ 
-/* #define ADC_MAX_RETRY_COUNT         3       /*!< Maximum retry count for failed operations */ 
+// #define ADC_ENABLE_ERROR_RECOVERY   STD_ON  /*!< Enable automatic error recovery */ 
+// #define ADC_MAX_RETRY_COUNT         3       /*!< Maximum retry count for failed operations */ 
 
 /* Watchdog Configuration */
-/* #define ADC_ENABLE_WATCHDOG         STD_ON  /*!< Enable conversion watchdog */ 
-/* #define ADC_WATCHDOG_TIMEOUT_MS     200     /*!< Watchdog timeout in milliseconds */ 
+// #define ADC_ENABLE_WATCHDOG         STD_ON  /*!< Enable conversion watchdog */ 
+// #define ADC_WATCHDOG_TIMEOUT_MS     200     /*!< Watchdog timeout in milliseconds */ 
 
 /****************************************************************************************
 *                              STREAMING CONFIGURATION                                 *
 ****************************************************************************************/
 /* UNUSED - Streaming configuration not used in source code */
 /* Streaming Buffer Configuration */
-/* #define ADC_STREAMING_BUFFER_SIZE   128     /*!< Default streaming buffer size */ 
-/* #define ADC_ENABLE_CIRCULAR_BUFFER  STD_ON  /*!< Enable circular buffer support */ 
-/* #define ADC_BUFFER_OVERFLOW_NOTIFY  STD_ON  /*!< Enable buffer overflow notification */ 
+// #define ADC_STREAMING_BUFFER_SIZE   128     /*!< Default streaming buffer size */ 
+// #define ADC_ENABLE_CIRCULAR_BUFFER  STD_ON  /*!< Enable circular buffer support */ 
+// #define ADC_BUFFER_OVERFLOW_NOTIFY  STD_ON  /*!< Enable buffer overflow notification */ 
 
 /* Streaming Thresholds */
-/* #define ADC_STREAM_NOTIFY_THRESHOLD 0.75    /*!< Notification threshold (75% full) */ 
-/* #define ADC_STREAM_CRITICAL_THRESHOLD 0.9   /*!< Critical threshold (90% full) */ 
+// #define ADC_STREAM_NOTIFY_THRESHOLD 0.75    /*!< Notification threshold (75% full) */ 
+// #define ADC_STREAM_CRITICAL_THRESHOLD 0.9   /*!< Critical threshold (90% full) */ 
 
 /****************************************************************************************
 *                              INTERRUPT CONFIGURATION                                 *
@@ -128,23 +128,23 @@
 #define ADC_ERROR_INTERRUPT_PRIORITY 3      /*!< Error interrupt priority */ 
 
 /* Interrupt Enable Masks */
-/* #define ADC_ENABLE_EOC_INTERRUPT    STD_ON  /*!< Enable end-of-conversion interrupt */ 
-/* #define ADC_ENABLE_DMA_INTERRUPT    STD_ON  /*!< Enable DMA transfer complete interrupt */ 
-/* #define ADC_ENABLE_ERROR_INTERRUPT  STD_ON  /*!< Enable error interrupt */ 
+// #define ADC_ENABLE_EOC_INTERRUPT    STD_ON  /*!< Enable end-of-conversion interrupt */ 
+// #define ADC_ENABLE_DMA_INTERRUPT    STD_ON  /*!< Enable DMA transfer complete interrupt */ 
+// #define ADC_ENABLE_ERROR_INTERRUPT  STD_ON  /*!< Enable error interrupt */ 
 
 /****************************************************************************************
 *                              PERFORMANCE CONFIGURATION                               *
 ****************************************************************************************/
 /* UNUSED - Performance configuration not used in source code */
 /* Performance Tuning */
-/* #define ADC_ENABLE_FAST_CONVERSION  STD_ON  /*!< Enable fast conversion mode */ 
-/* #define ADC_ENABLE_PARALLEL_CONV    STD_OFF /*!< Enable parallel conversion (if supported) */ 
-/* #define ADC_OPTIMIZE_FOR_SPEED      STD_ON  /*!< Optimize for conversion speed */ 
-/* #define ADC_OPTIMIZE_FOR_POWER      STD_OFF /*!< Optimize for power consumption */ 
+// #define ADC_ENABLE_FAST_CONVERSION  STD_ON  /*!< Enable fast conversion mode */ 
+// #define ADC_ENABLE_PARALLEL_CONV    STD_OFF /*!< Enable parallel conversion (if supported) */ 
+// #define ADC_OPTIMIZE_FOR_SPEED      STD_ON  /*!< Optimize for conversion speed */ 
+// #define ADC_OPTIMIZE_FOR_POWER      STD_OFF /*!< Optimize for power consumption */ 
 
 /* Cache Configuration */
-/* #define ADC_ENABLE_RESULT_CACHE     STD_ON  /*!< Enable result caching */ 
-/* #define ADC_CACHE_SIZE              32      /*!< Result cache size */ 
+// #define ADC_ENABLE_RESULT_CACHE     STD_ON  /*!< Enable result caching */ 
+// #define ADC_CACHE_SIZE              32      /*!< Result cache size */ 
 
 /****************************************************************************************
 *                              EXTERNAL DECLARATIONS                                   *

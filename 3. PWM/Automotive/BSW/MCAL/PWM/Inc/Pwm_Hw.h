@@ -47,43 +47,19 @@
 /* Timer clock disable mapping */
 #define PWM_HW_DISABLE_TIMER_CLOCK(HwUnit) \
     do { \
-        if ((HwUnit) == PWM_HW_UNIT_TIM1) RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, DISABLE); \
+        if ((HwUnit) == PWM_HW_UNIT_TIM1)      RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, DISABLE); \
         else if ((HwUnit) == PWM_HW_UNIT_TIM2) RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, DISABLE); \
         else if ((HwUnit) == PWM_HW_UNIT_TIM3) RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, DISABLE); \
         else if ((HwUnit) == PWM_HW_UNIT_TIM4) RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, DISABLE); \
     } while(0)
 
 /* Channel to TIM_Channel mapping */
+// TODO should be update not all mc have same number of channel per timer
+// Idea 1 not get constant modulo instead divide by 4 make it divide by MAX_CHANNEL_PER_HW_UNIT
 #define PWM_HW_GET_TIM_CHANNEL(ChannelId) \
     (((ChannelId) % 4) == 0 ? TIM_Channel_1 : \
      ((ChannelId) % 4) == 1 ? TIM_Channel_2 : \
      ((ChannelId) % 4) == 2 ? TIM_Channel_3 : TIM_Channel_4)
-
-/* GPIO port mapping for PWM channels */
-#define PWM_HW_GET_GPIO_PORT(HwUnit) \
-    ((HwUnit) == PWM_HW_UNIT_TIM1 ? GPIOA : \
-     (HwUnit) == PWM_HW_UNIT_TIM2 ? GPIOA : \
-     (HwUnit) == PWM_HW_UNIT_TIM3 ? GPIOA : \
-     (HwUnit) == PWM_HW_UNIT_TIM4 ? GPIOB : GPIOA)
-
-/* GPIO pin mapping for PWM channels */
-#define PWM_HW_GET_GPIO_PIN(HwUnit, Channel) \
-    ((HwUnit) == PWM_HW_UNIT_TIM1 ? \
-        ((Channel) == 0 ? GPIO_Pin_8 : \
-         (Channel) == 1 ? GPIO_Pin_9 : \
-         (Channel) == 2 ? GPIO_Pin_10 : GPIO_Pin_11) : \
-     (HwUnit) == PWM_HW_UNIT_TIM2 ? \
-        ((Channel) == 0 ? GPIO_Pin_0 : \
-         (Channel) == 1 ? GPIO_Pin_1 : \
-         (Channel) == 2 ? GPIO_Pin_2 : GPIO_Pin_3) : \
-     (HwUnit) == PWM_HW_UNIT_TIM3 ? \
-        ((Channel) == 0 ? GPIO_Pin_6 : \
-         (Channel) == 1 ? GPIO_Pin_7 : \
-         (Channel) == 2 ? GPIO_Pin_0 : GPIO_Pin_1) : \
-     (HwUnit) == PWM_HW_UNIT_TIM4 ? \
-        ((Channel) == 0 ? GPIO_Pin_6 : \
-         (Channel) == 1 ? GPIO_Pin_7 : \
-         (Channel) == 2 ? GPIO_Pin_8 : GPIO_Pin_9) : GPIO_Pin_0)
 
 /****************************************************************************************
 *                              HARDWARE VALIDATION MACROS                             *
@@ -108,14 +84,14 @@
  * @param[in] HwUnitId Hardware unit identifier
  * @return E_OK: Success, E_NOT_OK: Failed
  */
-Std_ReturnType PwmHw_Init(Pwm_HwUnitType HwUnitId);
+Std_ReturnType PwmHw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigType* ConfigPtr);
 
 /**
  * @brief Deinitialize PWM hardware unit
  * @param[in] HwUnitId Hardware unit identifier
  * @return E_OK: Success, E_NOT_OK: Failed
  */
-Std_ReturnType PwmHw_DeInit(Pwm_HwUnitType HwUnitId);
+Std_ReturnType PwmHw_DeInitHwUnit(Pwm_HwUnitType HwUnitId);
 
 /**
  * @brief Initialize PWM channel
@@ -276,27 +252,9 @@ Pwm_HwUnitType PwmHw_GetHwUnitFromChannel(Pwm_ChannelType ChannelId);
 uint8 PwmHw_GetHwChannelFromChannel(Pwm_ChannelType ChannelId);
 
 /****************************************************************************************
-*                              GPIO CONFIGURATION FUNCTIONS                           *
-****************************************************************************************/
-/**
- * @brief Configure GPIO for PWM output
- * @param[in] HwUnitId Hardware unit identifier
- * @param[in] HwChannel Hardware channel number
- * @return E_OK: Success, E_NOT_OK: Failed
- */
-Std_ReturnType PwmHw_ConfigureGpio(Pwm_HwUnitType HwUnitId, uint8 HwChannel);
-
-/**
- * @brief Reset GPIO configuration for PWM
- * @param[in] HwUnitId Hardware unit identifier
- * @param[in] HwChannel Hardware channel number
- * @return E_OK: Success, E_NOT_OK: Failed
- */
-Std_ReturnType PwmHw_ResetGpio(Pwm_HwUnitType HwUnitId, uint8 HwChannel);
-
-/****************************************************************************************
 *                              TIMER CONFIGURATION FUNCTIONS                          *
 ****************************************************************************************/
+// Todo: Remove function
 /**
  * @brief Configure timer base
  * @param[in] HwUnitId Hardware unit identifier
@@ -306,6 +264,7 @@ Std_ReturnType PwmHw_ResetGpio(Pwm_HwUnitType HwUnitId, uint8 HwChannel);
 Std_ReturnType PwmHw_ConfigureTimerBase(Pwm_HwUnitType HwUnitId,
                                         const Pwm_HwUnitConfigType* HwUnitConfig);
 
+// Todo: Remove function
 /**
  * @brief Configure timer output compare mode
  * @param[in] HwUnitId Hardware unit identifier

@@ -85,6 +85,7 @@ typedef enum
     PWM_TRANS_NOT_POSSIBLE = 0x05     /*!< Direct transition not possible or HW busy */
 } Pwm_PowerStateRequestResultType;
 
+
 /**
  * @brief Power state currently active or set as target power state
  * @details [SWS_Pwm_00197] Definition of datatype Pwm_PowerStateType
@@ -152,15 +153,7 @@ typedef uint16 Pwm_PhaseShiftType;
  */
 typedef uint32 Pwm_FrequencyType;
 
-/**
- * @brief PWM driver state type
- * @details Indicates the current state of the PWM driver
- */
-typedef enum
-{
-    PWM_UNINIT = 0,                    /*!< PWM driver is not initialized */
-    PWM_INIT                           /*!< PWM driver is initialized */
-} Pwm_StateType;
+
 
 /**
  * @brief PWM notification function pointer type
@@ -174,21 +167,21 @@ typedef void (*Pwm_NotificationFunctionType)(void);
  */
 typedef struct
 {
-    Pwm_ChannelType             ChannelId;              /*!< Channel identifier */
-    Pwm_HwUnitType              HwUnit;                 /*!< Hardware unit assignment */
-    uint8                       HwChannel;              /*!< Hardware channel within unit */
-    Pwm_ChannelClassType        ChannelClass;           /*!< Channel class (fixed/variable period) */
-    Pwm_PeriodType              DefaultPeriod;          /*!< Default period value */
-    uint16                      DefaultDutyCycle;       /*!< Default duty cycle value */
-    Pwm_OutputStateType         Polarity;               /*!< Output polarity */
-    Pwm_OutputStateType         IdleState;              /*!< Idle state */
-    Pwm_NotificationFunctionType NotificationPtr;       /*!< Notification function pointer */
-    Pwm_EdgeNotificationType    NotificationEdge;       /*!< Notification edge type */
-    uint8                       NotificationEnabled;    /*!< Notification enabled flag */
-    Pwm_PhaseShiftType          PhaseShift;             /*!< Phase shift value */
-    uint8                       DeadTimeEnabled;        /*!< Dead time enabled flag */
-    uint16                      DeadTimeValue;          /*!< Dead time value */
+    const Pwm_ChannelType           ChannelId;              /*!< Channel identifier */
+    const Pwm_HwUnitType            HwUnit;                 /*!< Hardware unit assignment */
+    const Pwm_ChannelClassType      ChannelClass;           /*!< Channel class (fixed/variable period) */
+    Pwm_PeriodType                  Period;          /*!< Default period value */
+    uint16                          DutyCycle;       /*!< Default duty cycle value */
+    Pwm_OutputStateType             Polarity;               /*!< Output polarity */
+    Pwm_OutputStateType             IdleState;              /*!< Idle state */
+    Pwm_NotificationFunctionType    NotificationPtr;        /*!< Notification function pointer */
+    Pwm_EdgeNotificationType        NotificationEdge;       /*!< Notification edge type */
+    boolean                         NotificationEnabled;    /*!< Notification enabled flag */
+    Pwm_PhaseShiftType              PhaseShift;             /*!< Phase shift value */
+    boolean                         DeadTimeEnabled;        /*!< Dead time enabled flag */
+    uint16                          DeadTimeValue;          /*!< Dead time value */
 } Pwm_ChannelConfigType;
+
 
 /**
  * @brief PWM hardware unit configuration structure
@@ -196,18 +189,26 @@ typedef struct
  */
 typedef struct
 {
-    Pwm_HwUnitType              HwUnit;                 /*!< Hardware unit identifier */
-    TIM_TypeDef*                TimerInstance;          /*!< Timer instance pointer */
-    uint16                      Prescaler;              /*!< Timer prescaler value */
+    const Pwm_HwUnitType        HwUnit;                 /*!< Hardware unit identifier */
+    // Turn this into macro and get timer instace base on hw id
+    // TIM_TypeDef*                TimerInstance;          /*!< Timer instance pointer */
+
+    // Init hw timer base parameter
+    Pwm_PeriodType              MaxPeriod;              /*!< Maximum period value not minus 1 */
+    uint16                      Prescaler;              /*!< Timer prescaler value not minus 1*/
     uint16                      CounterMode;            /*!< Counter mode */
     uint16                      ClockDivision;          /*!< Clock division */
     uint8                       RepetitionCounter;      /*!< Repetition counter */
-    Pwm_PeriodType              MaxPeriod;              /*!< Maximum period value */
+
+    uint8                       NbrOfEnabledChannels;
+    // TODO check where this is called
     uint8                       EnabledChannels;        /*!< Number of enabled channels */
     uint8                       ClockSource;            /*!< Clock source selection */
     uint8                       SyncMode;               /*!< Synchronization mode */
     uint8                       MasterSlaveMode;        /*!< Master/slave mode */
 } Pwm_HwUnitConfigType;
+
+
 
 /**
  * @brief PWM driver configuration structure
@@ -234,37 +235,6 @@ typedef struct
     uint8                           PwmDeadTimeEnabled;         /*!< Dead time enabled */
     uint16                          PwmDeadTimeValue;           /*!< Dead time value */
 } Pwm_ConfigType;
-
-/**
- * @brief PWM channel runtime data structure
- * @details Contains runtime information for a PWM channel
- */
-typedef struct
-{
-    Pwm_ChannelType             ChannelId;              /*!< Channel identifier */
-    Pwm_HwUnitType              HwUnit;                 /*!< Hardware unit */
-    uint8                       HwChannel;              /*!< Hardware channel */
-    Pwm_PeriodType              CurrentPeriod;          /*!< Current period */
-    uint16                      CurrentDutyCycle;       /*!< Current duty cycle */
-    Pwm_OutputStateType         CurrentState;           /*!< Current output state */
-    uint8                       IsInitialized;          /*!< Initialization flag */
-    uint8                       IsRunning;              /*!< Running flag */
-    uint8                       NotificationEnabled;    /*!< Notification enabled */
-} Pwm_ChannelRuntimeType;
-
-/**
- * @brief PWM hardware unit runtime data structure
- * @details Contains runtime information for a PWM hardware unit
- */
-typedef struct
-{
-    Pwm_HwUnitType              HwUnit;                 /*!< Hardware unit identifier */
-    TIM_TypeDef*                TimerInstance;          /*!< Timer instance pointer */
-    Pwm_PeriodType              CurrentPeriod;          /*!< Current period */
-    uint8                       IsInitialized;          /*!< Initialization flag */
-    uint8                       IsRunning;              /*!< Running flag */
-    uint8                       ActiveChannels;         /*!< Active channels mask */
-} Pwm_HwUnitRuntimeType;
 
 /****************************************************************************************
 *                              CONSTANTS AND MACROS                                   *
