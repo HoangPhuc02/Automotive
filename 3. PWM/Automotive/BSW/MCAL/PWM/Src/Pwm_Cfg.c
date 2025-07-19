@@ -17,9 +17,8 @@
 #include "Pwm_Types.h"
 #include "Pwm_Hw.h"
 
-
 /****************************************************************************************
-*                              CHANNEL CONFIGURATION                                   *
+*                              CONFIGURATION STRUCTURES                               *
 ****************************************************************************************/
 
 /**
@@ -165,23 +164,18 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
     }
 };
 
-/****************************************************************************************
-*                              HARDWARE UNIT CONFIGURATION                            *
-****************************************************************************************/
-
 /**
- * @brief PWM Hardware Unit Configuration Structure
+ * @brief PWM Hardware Unit Configuration Structure (Only Active Units)
  * @details Contains configuration for PWM hardware units (timers)
  */
-
 Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] = 
 {
     /* Timer 1 Configuration */
     {
         .HwUnit = PWM_HW_UNIT_TIM1,
         .Prescaler = PWM_TIM1_PRESCALER,
-        .CounterMode = TIM_CounterMode_Up,
-        .ClockDivision = TIM_CKD_DIV1,
+        // .CounterMode = TIM_CounterMode_Up,
+        // .ClockDivision = TIM_CKD_DIV1,
         .RepetitionCounter = 0,
         .MaxPeriod = PWM_TIM1_MAX_PERIOD,
         .EnabledChannels = PWM_TIM1_CHANNELS,
@@ -194,8 +188,8 @@ Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] =
     {
         .HwUnit = PWM_HW_UNIT_TIM2,
         .Prescaler = PWM_TIM2_PRESCALER,
-        .CounterMode = TIM_CounterMode_Up,
-        .ClockDivision = TIM_CKD_DIV1,
+        // .CounterMode = TIM_CounterMode_Up,
+        // .ClockDivision = TIM_CKD_DIV1,
         .RepetitionCounter = 0,
         .MaxPeriod = PWM_TIM2_MAX_PERIOD,
         .EnabledChannels = PWM_TIM2_CHANNELS,
@@ -204,41 +198,37 @@ Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] =
         .MasterSlaveMode = PWM_MASTER_SLAVE_DISABLED
     },
     
-    /* Timer 3 Configuration */
+    /* Timer 3 Configuration - DISABLED */
     {
         .HwUnit = PWM_HW_UNIT_TIM3,
-        .Prescaler = PWM_TIM3_PRESCALER,
-        .CounterMode = TIM_CounterMode_Up,
-        .ClockDivision = TIM_CKD_DIV1,
+        .Prescaler = 72, // PWM_TIM3_PRESCALER,
+        // .CounterMode = TIM_CounterMode_Up,
+        // .ClockDivision = TIM_CKD_DIV1,
         .RepetitionCounter = 0,
-        .MaxPeriod = PWM_TIM3_MAX_PERIOD,
-        .EnabledChannels = PWM_TIM3_CHANNELS,
+        .MaxPeriod = 65535, // PWM_TIM3_MAX_PERIOD,
+        .EnabledChannels = 4, // PWM_TIM3_CHANNELS,
         .ClockSource = PWM_CLOCK_SOURCE_INTERNAL,
         .SyncMode = PWM_SYNC_MODE_DISABLED,
         .MasterSlaveMode = PWM_MASTER_SLAVE_DISABLED
     },
     
-    /* Timer 4 Configuration */
+    /* Timer 4 Configuration - DISABLED */
     {
         .HwUnit = PWM_HW_UNIT_TIM4,
-        .Prescaler = PWM_TIM4_PRESCALER,
-        .CounterMode = TIM_CounterMode_Up,
-        .ClockDivision = TIM_CKD_DIV1,
+        .Prescaler = 72, // PWM_TIM4_PRESCALER,
+        // .CounterMode = TIM_CounterMode_Up,
+        // .ClockDivision = TIM_CKD_DIV1,
         .RepetitionCounter = 0,
-        .MaxPeriod = PWM_TIM4_MAX_PERIOD,
-        .EnabledChannels = PWM_TIM4_CHANNELS,
+        .MaxPeriod = 65535, // PWM_TIM4_MAX_PERIOD,
+        .EnabledChannels = 4, // PWM_TIM4_CHANNELS,
         .ClockSource = PWM_CLOCK_SOURCE_INTERNAL,
         .SyncMode = PWM_SYNC_MODE_DISABLED,
         .MasterSlaveMode = PWM_MASTER_SLAVE_DISABLED
     }
 };
 
-/****************************************************************************************
-*                              MAIN CONFIGURATION STRUCTURE                           *
-****************************************************************************************/
-
 /**
- * @brief PWM Driver Configuration Structure
+ * @brief PWM Driver Main Configuration Structure
  * @details Main configuration structure for PWM driver initialization
  */
 const Pwm_ConfigType Pwm_Config = 
@@ -264,7 +254,7 @@ const Pwm_ConfigType Pwm_Config =
 };
 
 /****************************************************************************************
-*                              CONFIGURATION VALIDATION                               *
+*                              CONFIGURATION ACCESS FUNCTIONS                         *
 ****************************************************************************************/
 
 /**
@@ -304,8 +294,6 @@ Std_ReturnType Pwm_ValidateConfig(const Pwm_ConfigType* ConfigPtr)
                 RetVal = E_NOT_OK;
                 break;
             }
-            
-
             
             /* Check period range */
             if ((ChannelConfig->Period < PWM_MIN_PERIOD) || 
@@ -357,10 +345,6 @@ Std_ReturnType Pwm_ValidateConfig(const Pwm_ConfigType* ConfigPtr)
     return RetVal;
 }
 
-/****************************************************************************************
-*                              CONFIGURATION ACCESS FUNCTIONS                         *
-****************************************************************************************/
-
 /**
  * @brief Gets channel configuration by channel ID
  * @param[in] ChannelId Channel identifier
@@ -394,3 +378,21 @@ const Pwm_HwUnitConfigType* Pwm_GetHwUnitConfig(Pwm_HwUnitType HwUnit)
     
     return ConfigPtr;
 }
+
+/****************************************************************************************
+*                                   NOTE                                               *
+****************************************************************************************
+* Main PWM configuration structures have been moved to Pwm_Cfg.h:
+* - Pwm_ChannelConfig[PWM_MAX_CHANNELS] - Channel configurations (8 active channels)
+* - Pwm_HwUnitConfig[PWM_MAX_HW_UNITS] - Hardware unit configurations (4 units)
+* - Pwm_Config - Main configuration structure
+* 
+* Unused configurations have been commented out:
+* - Timer 3 and Timer 4 configurations
+* - Channel IDs 8-15 definitions
+* - Unused notification callbacks
+****************************************************************************************/
+
+/****************************************************************************************
+*                                 END OF FILE                                          *
+****************************************************************************************/

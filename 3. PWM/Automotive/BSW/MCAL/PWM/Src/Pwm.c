@@ -35,14 +35,6 @@ Pwm_DriverStateType Pwm_DriverState = PWM_STATE_UNINIT;
  */
 const Pwm_ConfigType* Pwm_ConfigPtr = NULL_PTR;
 
-/**
- * @brief PWM notification functions
- * @details Array of notification function pointers for each channel
- */
-// TODO: May be remove due to already store in hw
-// TODO should add function to this maybe in init
-Pwm_NotificationFunctionType Pwm_NotificationFunctions[PWM_MAX_CHANNELS];
-
 /****************************************************************************************
 *                              LOCAL FUNCTION PROTOTYPES                              *
 ****************************************************************************************/
@@ -104,14 +96,6 @@ void Pwm_Init(const Pwm_ConfigType* ConfigPtr)
     /* Store configuration pointer */
     Pwm_ConfigPtr = ConfigPtr;
     
-    /* Initialize notification functions array */
-    /* Clear all enabled notification function pointers */
-    /* TODO : think to remove it*/
-    for (ChannelIndex = 0; ChannelIndex < PWM_MAX_CHANNELS; ChannelIndex++)
-    {
-        Pwm_NotificationFunctions[ChannelIndex] = NULL_PTR;
-        // Pwm_NotificationFunctions[ChannelIndex].NotificationEnabled = FALSE;
-    }
     
     /* Initialize hardware units */
     for (HwUnitIndex = 0; HwUnitIndex < ConfigPtr->PwmMaxHwUnits; HwUnitIndex++)
@@ -134,15 +118,13 @@ void Pwm_Init(const Pwm_ConfigType* ConfigPtr)
         if (PWM_HW_IS_TIMER_ENABLED(ChannelConfig->HwUnit))
         {
             (void)PwmHw_InitChannel(ChannelConfig->ChannelId, ChannelConfig);
-            
-            /* Set notification function if configured */
-            if (ChannelConfig->NotificationPtr != NULL_PTR)
-            {
-                Pwm_NotificationFunctions[ChannelConfig->ChannelId] = ChannelConfig->NotificationPtr;
-            }
         }
     }
-    
+    NVIC_EnableIRQ(TIM1_UP_IRQn);
+    NVIC_EnableIRQ(TIM1_CC_IRQn);
+    NVIC_EnableIRQ(TIM2_IRQn);
+    NVIC_EnableIRQ(TIM3_IRQn);
+    NVIC_EnableIRQ(TIM4_IRQn);
     /* Set driver state to initialized */
     Pwm_DriverState = PWM_STATE_INIT;
 }
@@ -180,12 +162,6 @@ void Pwm_DeInit(void)
     for (HwUnitIndex = 0; HwUnitIndex < PWM_MAX_HW_UNITS; HwUnitIndex++)
     {
         (void)PwmHw_DeInitHwUnit(HwUnitIndex);
-    }
-    
-    /* Clear notification functions array */
-    for (ChannelIndex = 0; ChannelIndex < PWM_MAX_CHANNELS; ChannelIndex++)
-    {
-        Pwm_NotificationFunctions[ChannelIndex] = NULL_PTR;
     }
     
     /* Clear configuration pointer */
@@ -400,9 +376,11 @@ void Pwm_DisableNotification(Pwm_ChannelType ChannelNumber)
         return;
     }
 #endif
-    
-    /* Disable notification */
-    (void)PwmHw_DisableNotification(ChannelNumber);
+    if (Pwm_ChannelConfig[ChannelNumber].NotificationEnabled == TRUE)
+    {
+        /* Disable notification */
+        (void)PwmHw_DisableNotification(ChannelNumber);
+    }
 }
 
 /**
@@ -487,14 +465,62 @@ void Pwm_GetVersionInfo(Std_VersionInfoType* VersionInfo)
  * @param[in] ChannelNumber Channel identifier that generated the notification
  * @return void
  */
-// TODO : change it to call it directly from channel config
-void Pwm_NotificationHandler(Pwm_ChannelType ChannelNumber)
+void Pwm_NotificationHandler(Pwm_HwUnitType HwUnit, uint16 TIM_IT)
 {
-    /* Check if channel is valid and notification function is configured */
-    if ((ChannelNumber < PWM_MAX_CHANNELS) && (Pwm_NotificationFunctions[ChannelNumber] != NULL_PTR))
+    if(TIM_IT == TIM_IT_Update)
     {
-        /* Call notification function */
-        Pwm_NotificationFunctions[ChannelNumber]();
+        for(uint8 i = 0; i < PWM_CHANNELS_PER_HW_UNIT; i++)
+        {
+            Pwm_ChannelType ChannelId = HwUnit * PWM_CHANNELS_PER_HW_UNIT + i;
+            /* Check if notification is enabled for the channel */
+            if((Pwm_ChannelConfig[ChannelId].NotificationEnabled == TRUE) &&
+               (Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_BOTH_EDGES ||\
+                Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_RISING_EDGE))
+            {
+                Pwm_ChannelConfig[ChannelId].NotificationPtr();
+            }
+
+        }
+    }
+    else if(TIM_IT == TIM_IT_CC1)
+    {
+        Pwm_ChannelType ChannelId = HwUnit * PWM_CHANNELS_PER_HW_UNIT + PWM_CHANNEL_0;
+        if((Pwm_ChannelConfig[ChannelId].NotificationEnabled == TRUE) &&
+            (Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_BOTH_EDGES ||\
+            Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_FALLING_EDGE))
+        {
+            Pwm_ChannelConfig[ChannelId].NotificationPtr();
+        }
+    }
+    else if(TIM_IT == TIM_IT_CC2)
+    {
+        Pwm_ChannelType ChannelId = HwUnit * PWM_CHANNELS_PER_HW_UNIT + PWM_CHANNEL_1;
+        if((Pwm_ChannelConfig[ChannelId].NotificationEnabled == TRUE) &&
+            (Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_BOTH_EDGES ||\
+            Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_FALLING_EDGE))
+        {
+            Pwm_ChannelConfig[ChannelId].NotificationPtr();
+        }
+    }
+    else if(TIM_IT == TIM_IT_CC3)
+    {
+        Pwm_ChannelType ChannelId = HwUnit * PWM_CHANNELS_PER_HW_UNIT + PWM_CHANNEL_2;
+        if((Pwm_ChannelConfig[ChannelId].NotificationEnabled == TRUE) &&
+            (Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_BOTH_EDGES ||\
+            Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_FALLING_EDGE))
+        {
+            Pwm_ChannelConfig[ChannelId].NotificationPtr();
+        }
+    }
+    else if(TIM_IT == TIM_IT_CC4)
+    {
+        Pwm_ChannelType ChannelId = HwUnit * PWM_CHANNELS_PER_HW_UNIT + PWM_CHANNEL_3;
+        if((Pwm_ChannelConfig[ChannelId].NotificationEnabled == TRUE) &&
+            (Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_BOTH_EDGES ||\
+            Pwm_ChannelConfig[ChannelId].NotificationEdge == PWM_FALLING_EDGE))
+        {
+            Pwm_ChannelConfig[ChannelId].NotificationPtr();
+        }
     }
 }
 

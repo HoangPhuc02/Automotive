@@ -95,6 +95,13 @@ extern const Pwm_ConfigType* Pwm_ConfigPtr;
 /****************************************************************************************
 *                                 CORE API FUNCTIONS                                  *
 ****************************************************************************************/
+/**
+ * @brief PWM notification handler
+ * @details Called from interrupt service routine when PWM notification occurs
+ * @param[in] ChannelNumber Channel identifier that generated the notification
+ * @return void
+ */
+void Pwm_NotificationHandler(Pwm_HwUnitType HwUnit, uint16 TIM_IT);
 
 /* === INITIALIZATION === */
 /**
@@ -168,6 +175,30 @@ void Pwm_SetOutputToIdle(Pwm_ChannelType ChannelNumber);
  * @Reentrancy Reentrant
  */
 Pwm_OutputStateType Pwm_GetOutputState(Pwm_ChannelType ChannelNumber);
+#if (PWM_NOTIFICATION_SUPPORTED == STD_ON)
+/**
+ * @brief Service to disable the PWM signal edge notification
+ * @details [SWS_Pwm_00101] Definition of API function Pwm_DisableNotification
+ * @param[in] ChannelNumber Numeric identifier of the PWM channel
+ * @return void
+ * @ServiceID 0x06
+ * @Sync Synchronous
+ * @Reentrancy Reentrant for different channel numbers
+ */
+void Pwm_DisableNotification(Pwm_ChannelType ChannelNumber);
+
+/**
+ * @brief Service to enable the PWM signal edge notification according to notification parameter
+ * @details [SWS_Pwm_00102] Definition of API function Pwm_EnableNotification
+ * @param[in] ChannelNumber Numeric identifier of the PWM channel
+ * @param[in] Notification Type of notification
+ * @return void
+ * @ServiceID 0x07
+ * @Sync Synchronous
+ * @Reentrancy Reentrant for different channel numbers
+ */
+void Pwm_EnableNotification(Pwm_ChannelType ChannelNumber, Pwm_EdgeNotificationType Notification);
+#endif
 
 /****************************************************************************************
 *                              UTILITY FUNCTIONS                                       *

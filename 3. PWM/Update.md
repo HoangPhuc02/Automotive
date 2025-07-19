@@ -17,6 +17,19 @@ TIM_Instace in hwunit
 - Change read output 
 - Add test for testing
 
+// 18/7/2025
+
+- Fixed Interrupt Notification issue
+    - **Problem**: When disabling notification for one channel, it accidentally turned off notifications for other channels in the same PWM group
+    - **Solution**: Created a flag system to track notification status of each channel
+        - Only turn off group interrupts when all notifications are off
+        - Only turn on group interrupts when at least one notification is on
+    - **Note**: The hardware has 4 PWM units with 16 channels total. We use 8-bit arrays to track status, which makes it easy to expand later if needed
+        - Pwm_UpdateInterruptUsers for storing flags
+        -How to get mask of TIM_CHANNEL_x = x<<2 so we will use this mechanisim to get bit position for status array
+        (TIM_CHANNEL >> 2) get the bit position x then 1 << x to enable corresponding status
+
+
 - Can't do 
  [SWS_Pwm_10051]
  Upstream requirements: SRS_BSW_00323, SRS_BSW_00386

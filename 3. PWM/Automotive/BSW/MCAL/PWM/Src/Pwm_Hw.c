@@ -21,7 +21,7 @@
 /****************************************************************************************
 *                              LOCAL VARIABLES                                         *
 ****************************************************************************************/
-
+static uint8 Pwm_UpdateInterruptUsers[PWM_MAX_HW_UNITS] = {0};
 
 /****************************************************************************************
 *                              INITIALIZATION FUNCTIONS                               *
@@ -58,23 +58,13 @@ Std_ReturnType PwmHw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigTyp
         
         /* Configure timer */
         TIM_TimeBaseInit(TIM_Instance, &TIM_TimeBaseStructure);
-
-        // /* Initialize runtime data */
-        // Pwm_HwUnitRuntime[HwUnit].HwUnit = HwUnit;
-        // Pwm_HwUnitRuntime[HwUnit].TimerInstance = ConfigPtr->TimerInstance;
-        // Pwm_HwUnitRuntime[HwUnit].CurrentPeriod = ConfigPtr->MaxPeriod;
-        // Pwm_HwUnitRuntime[HwUnit].IsInitialized = STD_ON;
-        // Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_OFF;
-        // Pwm_HwUnitRuntime[HwUnit].ActiveChannels = 0;
         
         /* Enable ARR preload */
         TIM_ARRPreloadConfig(TIM_Instance, ENABLE);
         
         /* Enable timer */
         TIM_Cmd(TIM_Instance, ENABLE);
-        
-        /* Update runtime state */
-        // Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_ON;
+
     }
     
     return RetVal;
@@ -107,14 +97,6 @@ Std_ReturnType PwmHw_DeInitHwUnit(Pwm_HwUnitType HwUnit)
         
         /* Disable timer clock */
         PWM_HW_DISABLE_TIMER_CLOCK(HwUnit);
-        
-        /* Reset runtime data */
-        // Pwm_HwUnitRuntime[HwUnit].HwUnit = PWM_HW_UNIT_INVALID;
-        // Pwm_HwUnitRuntime[HwUnit].TimerInstance = NULL_PTR;
-        // Pwm_HwUnitRuntime[HwUnit].CurrentPeriod = 0;
-        // Pwm_HwUnitRuntime[HwUnit].IsInitialized = STD_OFF;
-        // Pwm_HwUnitRuntime[HwUnit].IsRunning = STD_OFF;
-        // Pwm_HwUnitRuntime[HwUnit].ActiveChannels = 0;
     }
     
     return RetVal;
@@ -349,13 +331,7 @@ Std_ReturnType PwmHw_SetOutputToIdle(Pwm_ChannelType ChannelId)
         TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
         /* Disable output compare based on channel */
         TIM_CCxCmd(TIM_Instance, TIM_Channel, TIM_CCx_Disable);
-        
-        
-        // if (RetVal == E_OK)
-        // {
-        //     /* Update runtime state */
-        //     Pwm_ChannelConfig[ChannelId].IsRunning = STD_OFF;
-        // }
+
     }
     
     return RetVal;
@@ -391,10 +367,9 @@ Pwm_OutputStateType PwmHw_GetOutputState(Pwm_ChannelType ChannelId)
 /****************************************************************************************
 *                              NOTIFICATION FUNCTIONS                                 *
 ****************************************************************************************/
-
 /**
  * @brief Enables PWM notification for a channel
- * @details Enables interrupt generation for the specified channel
+ * @details Enables interrupt generation for the specified channel với quản lý thông minh
  * @param[in] ChannelId Channel identifier
  * @param[in] Notification Notification edge type
  * @return E_OK if successful, E_NOT_OK otherwise
@@ -404,47 +379,62 @@ Std_ReturnType PwmHw_EnableNotification(Pwm_ChannelType ChannelId, Pwm_EdgeNotif
     Std_ReturnType RetVal = E_OK;
     uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
     TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
-    // check rising by using update or cc-capture compare ccr
+    Pwm_HwUnitType HwUnit = Pwm_ChannelConfig[ChannelId].HwUnit;
+    uint8 channel_bit = (1 << (TIM_Channel >> 2)); // Convert TIM_Channel to bit position
     /* Validate parameters */
     if (ChannelId >= PWM_MAX_CHANNELS)
     {
         RetVal = E_NOT_OK;
     }
     else
-    {
+    {        
+        /* Rising Edge (Update interrupt) */
         if(Notification == PWM_RISING_EDGE || Notification == PWM_BOTH_EDGES)
         {
-
+            /* Mark this channel is being used for Update interrupt */
+            Pwm_UpdateInterruptUsers[HwUnit] |= channel_bit;
+            
+            /* Only enable Update interrupt if it having enable */
+            if (!(TIM_Instance->DIER & TIM_IT_Update))
+            {
+                TIM_ITConfig(TIM_Instance, TIM_IT_Update, ENABLE);
+            }
+            // if(Pwm_UpdateInterruptUsers[HwUnit] == 0)
+            // {
+            //     /* Disable Update interrupt if no channel is using it */
+            //     TIM_ITConfig(TIM_Instance, TIM_IT_Update, ENABLE);
+            // }
         }
+        
+        /* Falling Edge (CC interrupt) */
         if(Notification == PWM_FALLING_EDGE || Notification == PWM_BOTH_EDGES)
         {
-
-        }
-
-        /* Enable interrupt based on channel */
-        switch (TIM_Channel)
-        {
-            case TIM_Channel_1:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC1, ENABLE);
-                break;
-            case TIM_Channel_2:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC2, ENABLE);
-                break;
-            case TIM_Channel_3:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC3, ENABLE);
-                break;
-            case TIM_Channel_4:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC4, ENABLE);
-                break;
-            default:
-                RetVal = E_NOT_OK;
-                break;
+            /* Enable CC interrupt cho channel cụ thể */
+            switch (TIM_Channel)
+            {
+                case TIM_Channel_1:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC1, ENABLE);
+                    break;
+                case TIM_Channel_2:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC2, ENABLE);
+                    break;
+                case TIM_Channel_3:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC3, ENABLE);
+                    break;
+                case TIM_Channel_4:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC4, ENABLE);
+                    break;
+                default:
+                    RetVal = E_NOT_OK;
+                    break;
+            }
         }
         
         if (RetVal == E_OK)
         {
-            /* Update runtime data */
-            Pwm_ChannelConfig[ChannelId].NotificationEnabled = STD_ON;
+            /* Update enabled */
+            Pwm_ChannelConfig[ChannelId].NotificationEnabled = TRUE;
+            Pwm_ChannelConfig[ChannelId].NotificationEdge = Notification;
         }
     }
     
@@ -453,15 +443,21 @@ Std_ReturnType PwmHw_EnableNotification(Pwm_ChannelType ChannelId, Pwm_EdgeNotif
 
 /**
  * @brief Disables PWM notification for a channel
- * @details Disables interrupt generation for the specified channel
+ * @details Disables interrupt generation cho channel cụ thể mà không ảnh hưởng channel khác
  * @param[in] ChannelId Channel identifier
  * @return E_OK if successful, E_NOT_OK otherwise
  */
 Std_ReturnType PwmHw_DisableNotification(Pwm_ChannelType ChannelId)
 {
     Std_ReturnType RetVal = E_OK;
-        uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
-    TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(Pwm_ChannelConfig[ChannelId].HwUnit);
+    uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
+
+    Pwm_HwUnitType HwUnit = Pwm_ChannelConfig[ChannelId].HwUnit;
+    Pwm_EdgeNotificationType Notification = Pwm_ChannelConfig[ChannelId].NotificationEdge;
+
+    TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(HwUnit);
+    uint8 channel_bit = (1 << (TIM_Channel >> 2)); // Convert TIM_Channel to bit position
+    
     /* Validate parameters */
     if (ChannelId >= PWM_MAX_CHANNELS)
     {
@@ -469,29 +465,46 @@ Std_ReturnType PwmHw_DisableNotification(Pwm_ChannelType ChannelId)
     }
     else
     {
-        /* Disable interrupt based on channel */
-        switch (TIM_Channel)
+        /* Rising Edge (Update interrupt) */
+        if(Notification == PWM_RISING_EDGE || Notification == PWM_BOTH_EDGES)
         {
-            case TIM_Channel_1:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC1, DISABLE);
-                break;
-            case TIM_Channel_2:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC2, DISABLE);
-                break;
-            case TIM_Channel_3:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC3, DISABLE);
-                break;
-            case TIM_Channel_4:
-                TIM_ITConfig(TIM_Instance, TIM_IT_CC4, DISABLE);
-                break;
-            default:
-                RetVal = E_NOT_OK;
-                break;
+            /* Bỏ đánh dấu channel này khỏi Update interrupt users */
+            Pwm_UpdateInterruptUsers[HwUnit] &= ~channel_bit;
+            
+            /* Chỉ disable Update interrupt nếu không còn channel nào sử dụng */
+            if (Pwm_UpdateInterruptUsers[HwUnit] == 0)
+            {
+                TIM_ITConfig(TIM_Instance, TIM_IT_Update, DISABLE);
+            }
+        }
+        
+        /* Xử lý Falling Edge (CC interrupt) */
+        if(Notification == PWM_FALLING_EDGE || Notification == PWM_BOTH_EDGES)
+        {
+            /* Disable CC interrupt cho channel cụ thể */
+            switch (TIM_Channel)
+            {
+                case TIM_Channel_1:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC1, DISABLE);
+                    break;
+                case TIM_Channel_2:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC2, DISABLE);
+                    break;
+                case TIM_Channel_3:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC3, DISABLE);
+                    break;
+                case TIM_Channel_4:
+                    TIM_ITConfig(TIM_Instance, TIM_IT_CC4, DISABLE);
+                    break;
+                default:
+                    RetVal = E_NOT_OK;
+                    break;
+            }
         }
         
         if (RetVal == E_OK)
         {
-            /* Update runtime data */
+            /* Update enabled */
             Pwm_ChannelConfig[ChannelId].NotificationEnabled = FALSE;
         }
     }

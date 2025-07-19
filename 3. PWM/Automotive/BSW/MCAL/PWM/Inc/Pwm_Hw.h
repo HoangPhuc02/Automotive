@@ -35,6 +35,8 @@
      (HwUnit) == PWM_HW_UNIT_TIM3 ? TIM3 : \
      (HwUnit) == PWM_HW_UNIT_TIM4 ? TIM4 : NULL)
 
+
+
 /* Timer clock enable mapping */
 #define PWM_HW_ENABLE_TIMER_CLOCK(HwUnit) \
     do { \
