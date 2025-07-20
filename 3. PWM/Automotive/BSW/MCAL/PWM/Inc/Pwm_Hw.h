@@ -23,6 +23,7 @@
 #include "stm32f10x_tim.h"
 #include "stm32f10x_rcc.h"
 #include "stm32f10x_gpio.h"
+#include "stm32f10x.h"
 
 
 /****************************************************************************************
@@ -98,11 +99,9 @@ Std_ReturnType PwmHw_DeInitHwUnit(Pwm_HwUnitType HwUnitId);
 /**
  * @brief Initialize PWM channel
  * @param[in] ChannelId Channel identifier
- * @param[in] ChannelConfig Pointer to channel configuration
  * @return E_OK: Success, E_NOT_OK: Failed
  */
-Std_ReturnType PwmHw_InitChannel(Pwm_ChannelType ChannelId, 
-                                 const Pwm_ChannelConfigType* ChannelConfig);
+Std_ReturnType PwmHw_InitChannel(Pwm_ChannelType ChannelId);
 
 /**
  * @brief Deinitialize PWM channel

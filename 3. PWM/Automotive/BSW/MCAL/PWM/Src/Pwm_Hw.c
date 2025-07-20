@@ -17,7 +17,6 @@
 #include "Pwm_Cfg.h"
 #include "Det.h"
 
-
 /****************************************************************************************
 *                              LOCAL VARIABLES                                         *
 ****************************************************************************************/
@@ -52,11 +51,12 @@ Std_ReturnType PwmHw_InitHwUnit(Pwm_HwUnitType HwUnit, const Pwm_HwUnitConfigTyp
         /* Initialize timer base configuration */
         TIM_TimeBaseStructure.TIM_Period = ConfigPtr->MaxPeriod - 1;
         TIM_TimeBaseStructure.TIM_Prescaler = ConfigPtr->Prescaler - 1;
-        TIM_TimeBaseStructure.TIM_ClockDivision = ConfigPtr->ClockDivision;
-        TIM_TimeBaseStructure.TIM_CounterMode = ConfigPtr->CounterMode;
+        TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1; // TODO default need to fix
+        TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
         TIM_TimeBaseStructure.TIM_RepetitionCounter = ConfigPtr->RepetitionCounter;
         
         /* Configure timer */
+        
         TIM_TimeBaseInit(TIM_Instance, &TIM_TimeBaseStructure);
         
         /* Enable ARR preload */
@@ -109,14 +109,14 @@ Std_ReturnType PwmHw_DeInitHwUnit(Pwm_HwUnitType HwUnit)
  * @param[in] ChannelConfig Pointer to channel configuration
  * @return E_OK if initialization successful, E_NOT_OK otherwise
  */
-Std_ReturnType PwmHw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelConfigType* ChannelConfig)
+Std_ReturnType PwmHw_InitChannel(Pwm_ChannelType ChannelId)
 {
     Std_ReturnType RetVal = E_OK;
     TIM_OCInitTypeDef TIM_OCInitStructure;
     Pwm_HwUnitType HwUnitId;
-
+    Pwm_ChannelConfigType* ChannelConfigPtr = &Pwm_ChannelConfig[ChannelId];
     /* Validate parameters */
-    if ((ChannelId >= PWM_MAX_CHANNELS) || (ChannelConfig == NULL_PTR))
+    if (ChannelId >= PWM_MAX_CHANNELS)
     {
         RetVal = E_NOT_OK;
     }
@@ -124,19 +124,19 @@ Std_ReturnType PwmHw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelCon
     {
 
         /* Get timer channel */
-        HwUnitId = ChannelConfig->HwUnit;
+        HwUnitId = ChannelConfigPtr->HwUnit;
 
         uint16 TIM_Channel = PWM_HW_GET_TIM_CHANNEL(ChannelId);
         TIM_TypeDef* TIM_Instance = PWM_HW_GET_TIMER(HwUnitId);
-
+        uint16 CompareValue = (uint16)(((uint32)(ChannelConfigPtr->DutyCycle) * (uint32)(ChannelConfigPtr->Period)) >> 15);
         /* Configure timer output compare */
         TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
         TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;   // default
         TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Disable;
-        TIM_OCInitStructure.TIM_Pulse = ChannelConfig->DutyCycle;
-        TIM_OCInitStructure.TIM_OCPolarity = (ChannelConfig->Polarity == PWM_HIGH) ? TIM_OCPolarity_High : TIM_OCPolarity_Low;
+        TIM_OCInitStructure.TIM_Pulse = CompareValue;
+        TIM_OCInitStructure.TIM_OCPolarity = (ChannelConfigPtr->Polarity == PWM_HIGH) ? TIM_OCPolarity_High : TIM_OCPolarity_Low;
         TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
-        TIM_OCInitStructure.TIM_OCIdleState = (ChannelConfig->IdleState == PWM_HIGH) ? TIM_OCIdleState_Set : TIM_OCIdleState_Reset;
+        TIM_OCInitStructure.TIM_OCIdleState = (ChannelConfigPtr->IdleState == PWM_HIGH) ? TIM_OCIdleState_Set : TIM_OCIdleState_Reset;
         TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset;
         
         /* Initialize output compare based on channel */
@@ -166,11 +166,11 @@ Std_ReturnType PwmHw_InitChannel(Pwm_ChannelType ChannelId, const Pwm_ChannelCon
         if (RetVal == E_OK)
         {
             /* Initialize channel runtime data */
-            Pwm_ChannelConfig[ChannelId].NotificationEnabled = FALSE;
-            
+
+            ChannelConfigPtr->IdleStateSet = FALSE;
 
             /* Enable main output for advanced timers */
-            if (ChannelConfig->HwUnit == PWM_HW_UNIT_TIM1)
+            if (ChannelConfigPtr->HwUnit == PWM_HW_UNIT_TIM1)
             {
                 TIM_CtrlPWMOutputs(TIM1, ENABLE);
             }
@@ -203,6 +203,14 @@ Std_ReturnType PwmHw_SetDutyCycle(Pwm_ChannelType ChannelId, uint16 DutyCycle)
     {
         RetVal = E_NOT_OK;
     }
+    else if(Pwm_ChannelConfig[ChannelId].IdleStateSet == TRUE)
+    {
+        PwmHw_InitChannel(ChannelId);
+
+        // Pwm_ChannelConfig[ChannelId].IdleStateSet = FALSE;
+        
+        // Now continue with normal duty cycle setting...
+    }
     else
     {
         /* Calculate compare value */
@@ -211,8 +219,7 @@ Std_ReturnType PwmHw_SetDutyCycle(Pwm_ChannelType ChannelId, uint16 DutyCycle)
         // when u use duty cycle as max 0x8000 when u shift it will like 2^15 / 2^15 = 1 or 100%
         // when u want 50% which 0x4000 / 2^15 = 1/2 
         CompareValue = (uint16)(((uint32)(DutyCycle) * (uint32)(Pwm_ChannelConfig[ChannelId].Period)) >> 15);
-        
-        // TODO fix this 
+
         /* Update compare value based on channel */
         switch (TIM_Channel)
         {
@@ -332,6 +339,42 @@ Std_ReturnType PwmHw_SetOutputToIdle(Pwm_ChannelType ChannelId)
         /* Disable output compare based on channel */
         TIM_CCxCmd(TIM_Instance, TIM_Channel, TIM_CCx_Disable);
 
+        /* Force output to idle state using timer's forced output mode */
+        switch (TIM_Channel)
+        {
+            case TIM_Channel_1: 
+                if (Pwm_ChannelConfig[ChannelId].IdleState == PWM_HIGH) {
+                    TIM_ForcedOC1Config(TIM_Instance, TIM_ForcedAction_Active);
+                } else {    
+                    TIM_ForcedOC1Config(TIM_Instance, TIM_ForcedAction_InActive);
+                }
+                break;
+            case TIM_Channel_2:
+                if (Pwm_ChannelConfig[ChannelId].IdleState == PWM_HIGH) {
+                    TIM_ForcedOC2Config(TIM_Instance, TIM_ForcedAction_Active);
+                } else {
+                    TIM_ForcedOC2Config(TIM_Instance, TIM_ForcedAction_InActive);
+                }
+                break;
+            case TIM_Channel_3:
+                if (Pwm_ChannelConfig[ChannelId].IdleState == PWM_HIGH) {
+                    TIM_ForcedOC3Config(TIM_Instance, TIM_ForcedAction_Active);
+                } else {
+                    TIM_ForcedOC3Config(TIM_Instance, TIM_ForcedAction_InActive);
+                }
+                break;
+            case TIM_Channel_4:
+                if (Pwm_ChannelConfig[ChannelId].IdleState == PWM_HIGH) {
+                    TIM_ForcedOC4Config(TIM_Instance, TIM_ForcedAction_Active);
+                } else {
+                    TIM_ForcedOC4Config(TIM_Instance, TIM_ForcedAction_InActive);
+                }
+                break;
+        default: return PWM_LOW;
+        }
+        /* Re-enable output to apply forced state */
+        TIM_CCxCmd(TIM_Instance, TIM_Channel, TIM_CCx_Enable);
+        Pwm_ChannelConfig[ChannelId].IdleStateSet = TRUE;
     }
     
     return RetVal;

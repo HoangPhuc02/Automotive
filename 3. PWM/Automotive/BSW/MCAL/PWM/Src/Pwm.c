@@ -112,12 +112,13 @@ void Pwm_Init(const Pwm_ConfigType* ConfigPtr)
     /* Initialize PWM channels */
     for (ChannelIndex = 0; ChannelIndex < ConfigPtr->PwmMaxChannels; ChannelIndex++)
     {
-        const Pwm_ChannelConfigType* ChannelConfig = &ConfigPtr->PwmChannelConfig[ChannelIndex];
+        Pwm_ChannelConfigType* ChannelConfig = &ConfigPtr->PwmChannelConfig[ChannelIndex];
         
         /* Check if channel's hardware unit is enabled */
         if (PWM_HW_IS_TIMER_ENABLED(ChannelConfig->HwUnit))
         {
-            (void)PwmHw_InitChannel(ChannelConfig->ChannelId, ChannelConfig);
+            (void)PwmHw_InitChannel(ChannelConfig->ChannelId);
+            ChannelConfig->NotificationEnabled = FALSE;
         }
     }
     NVIC_EnableIRQ(TIM1_UP_IRQn);

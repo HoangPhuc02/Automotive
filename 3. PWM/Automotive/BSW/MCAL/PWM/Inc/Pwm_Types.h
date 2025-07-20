@@ -177,9 +177,7 @@ typedef struct
     Pwm_NotificationFunctionType    NotificationPtr;        /*!< Notification function pointer */
     Pwm_EdgeNotificationType        NotificationEdge;       /*!< Notification edge type */
     boolean                         NotificationEnabled;    /*!< Notification enabled flag */
-    Pwm_PhaseShiftType              PhaseShift;             /*!< Phase shift value */
-    boolean                         DeadTimeEnabled;        /*!< Dead time enabled flag */
-    uint16                          DeadTimeValue;          /*!< Dead time value */
+    boolean                         IdleStateSet;           /*!< Idle state set flag */
 } Pwm_ChannelConfigType;
 
 

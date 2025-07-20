@@ -38,10 +38,6 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
         .NotificationEdge = PWM_RISING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
     },
     
     /* Channel 1 - TIM1 Channel 2 */
@@ -54,11 +50,7 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
-        .NotificationEdge = PWM_RISING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
+        .NotificationEdge = PWM_RISING_EDGE
     },
     
     /* Channel 2 - TIM1 Channel 3 */
@@ -72,10 +64,6 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
         .NotificationEdge = PWM_RISING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
     },
     
     /* Channel 3 - TIM1 Channel 4 */
@@ -89,10 +77,6 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .IdleState = PWM_LOW,
         .NotificationPtr = NULL_PTR,
         .NotificationEdge = PWM_RISING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
     },
     
     /* Channel 4 - TIM2 Channel 1 */
@@ -104,12 +88,8 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
-        .NotificationPtr = NULL_PTR,
+        .NotificationPtr = Pwm_Tim2_Channel1_Notification,
         .NotificationEdge = PWM_FALLING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
     },
     
     /* Channel 5 - TIM2 Channel 2 */
@@ -121,12 +101,8 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
-        .NotificationPtr = NULL_PTR,
+        .NotificationPtr = Pwm_Tim2_Channel2_Notification,
         .NotificationEdge = PWM_FALLING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
     },
     
     /* Channel 6 - TIM2 Channel 3 */
@@ -138,12 +114,8 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
         .IdleState = PWM_LOW,
-        .NotificationPtr = NULL_PTR,
+        .NotificationPtr = Pwm_Tim2_Channel3_Notification,
         .NotificationEdge = PWM_FALLING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
     },
     
     /* Channel 7 - TIM2 Channel 4 */
@@ -154,13 +126,9 @@ Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS] =
         .Period = PWM_DEFAULT_PERIOD,
         .DutyCycle = PWM_DEFAULT_DUTY_CYCLE,
         .Polarity = PWM_HIGH,
-        .IdleState = PWM_LOW,
+        .IdleState = PWM_HIGH,
         .NotificationPtr = NULL_PTR,
         .NotificationEdge = PWM_FALLING_EDGE,
-        .NotificationEnabled = STD_OFF,
-        .PhaseShift = 0,
-        .DeadTimeEnabled = STD_OFF,
-        .DeadTimeValue = 0
     }
 };
 

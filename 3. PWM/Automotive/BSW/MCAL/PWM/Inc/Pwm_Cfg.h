@@ -47,40 +47,40 @@
 #define PWM_SYSTEM_FREQUENCY        72000000UL /*!< System frequency in Hz */
 
 /****************************************************************************************
+*                              TIMING CONFIGURATION                                    *
+****************************************************************************************/
+#define PWM_DEFAULT_FREQUENCY       1000    /*!< Default PWM frequency in Hz */
+#define PWM_DEFAULT_PERIOD          10000   /*!< Default PWM period in timer ticks (10KHz/10000 = 1Hz)*/
+#define PWM_DEFAULT_DUTY_CYCLE      0x4000  /*!< Default duty cycle (50%) */
+#define PWM_MIN_PERIOD              1       /*!< Minimum period value */
+#define PWM_MAX_PERIOD              65535   /*!< Maximum period value */
+
+/****************************************************************************************
 *                              HARDWARE CONFIGURATION                                  *
 ****************************************************************************************/
 /* Timer 1 Configuration */
 #define PWM_TIM1_ENABLED            STD_ON
-#define PWM_TIM1_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
-#define PWM_TIM1_MAX_PERIOD         65535   /*!< Maximum period for Timer 1 */
+#define PWM_TIM1_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
+#define PWM_TIM1_MAX_PERIOD         PWM_DEFAULT_PERIOD   /*!< Maximum period for Timer 1 */
 #define PWM_TIM1_CHANNELS           4       /*!< Number of channels in Timer 1 */
 
 /* Timer 2 Configuration */
 #define PWM_TIM2_ENABLED            STD_ON
-#define PWM_TIM2_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
-#define PWM_TIM2_MAX_PERIOD         65535   /*!< Maximum period for Timer 2 */
+#define PWM_TIM2_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
+#define PWM_TIM2_MAX_PERIOD         PWM_DEFAULT_PERIOD   /*!< Maximum period for Timer 2 */
 #define PWM_TIM2_CHANNELS           4       /*!< Number of channels in Timer 2 */
 
 /* Timer 3 Configuration - DISABLED */
 #define PWM_TIM3_ENABLED            STD_OFF
-#define PWM_TIM3_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
+#define PWM_TIM3_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
 #define PWM_TIM3_MAX_PERIOD         65535   /*!< Maximum period for Timer 3 */
 #define PWM_TIM3_CHANNELS           4       /*!< Number of channels in Timer 3 */
 
 /* Timer 4 Configuration - DISABLED */
 #define PWM_TIM4_ENABLED            STD_OFF
-#define PWM_TIM4_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
+#define PWM_TIM4_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
 #define PWM_TIM4_MAX_PERIOD         65535   /*!< Maximum period for Timer 4 */
 #define PWM_TIM4_CHANNELS           4       /*!< Number of channels in Timer 4 */
-
-/****************************************************************************************
-*                              TIMING CONFIGURATION                                    *
-****************************************************************************************/
-#define PWM_DEFAULT_FREQUENCY       1000    /*!< Default PWM frequency in Hz */
-#define PWM_DEFAULT_PERIOD          1000    /*!< Default PWM period in timer ticks */
-#define PWM_DEFAULT_DUTY_CYCLE      0x4000  /*!< Default duty cycle (50%) */
-#define PWM_MIN_PERIOD              1       /*!< Minimum period value */
-#define PWM_MAX_PERIOD              65535   /*!< Maximum period value */
 
 /****************************************************************************************
 *                              SAFETY CONFIGURATION                                    *
@@ -157,15 +157,15 @@ const Pwm_HwUnitConfigType* Pwm_GetHwUnitConfig(Pwm_HwUnitType HwUnit);
 *                              CALLBACK FUNCTION DECLARATIONS                         *
 ****************************************************************************************/
 /* Channel notification callbacks - Active Timers */
-void Pwm_Tim1_Channel1_Notification(void);
-void Pwm_Tim1_Channel2_Notification(void);
-void Pwm_Tim1_Channel3_Notification(void);
-void Pwm_Tim1_Channel4_Notification(void);
-
-void Pwm_Tim2_Channel1_Notification(void);
-void Pwm_Tim2_Channel2_Notification(void);
-void Pwm_Tim2_Channel3_Notification(void);
-void Pwm_Tim2_Channel4_Notification(void);
+extern void Pwm_Tim1_Channel1_Notification(void);
+extern void Pwm_Tim1_Channel2_Notification(void);
+extern void Pwm_Tim1_Channel3_Notification(void);
+extern void Pwm_Tim1_Channel4_Notification(void);
+ 
+extern void Pwm_Tim2_Channel1_Notification(void);
+extern void Pwm_Tim2_Channel2_Notification(void);
+extern void Pwm_Tim2_Channel3_Notification(void);
+extern void Pwm_Tim2_Channel4_Notification(void);
 
 /* Channel notification callbacks - Unused Timers (Commented Out) */
 // void Pwm_Tim3_Channel1_Notification(void);

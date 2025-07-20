@@ -27,7 +27,7 @@
 #define PWM_MODULE_ID               121     /*!< PWM Driver Module ID */
 #define PWM_INSTANCE_ID             0       /*!< PWM Driver Instance ID */
 
-#define PWM_SW_MAJOR_VERSION        1       /*!< PWM Driver Major Version */
+#define PWM_SW_MAJOR_VERSION        2       /*!< PWM Driver Major Version */
 #define PWM_SW_MINOR_VERSION        0       /*!< PWM Driver Minor Version */
 #define PWM_SW_PATCH_VERSION        0       /*!< PWM Driver Patch Version */
 
@@ -73,14 +73,6 @@
 #define PWM_E_POWER_STATE_NOT_SUPPORTED 0x17  /*!<  The requested power state is not supported by the PWM module. */
 #define PWM_E_TRANSITION_NOT_POSSIBLE    0x18 /*!<  The requested power state is not reachable from the current one*/
 #define PWM_E_PERIPHERAL_NOT_PREPARED     0x19  /*!<  API Pwm_SetPowerState has been called without having called the API Pwm_PreparePowerState before.*/
-
-
-/****************************************************************************************
-*                              RUNTIME ERROR CODES                                     *
-****************************************************************************************/
-#define PWM_E_NOTIFICATION_OVERFLOW     0x19    /*!< Notification overflow */
-#define PWM_E_DUTY_CYCLE_OUT_OF_RANGE   0x1A    /*!< Duty cycle out of range */
-#define PWM_E_PERIOD_OUT_OF_RANGE       0x1B    /*!< Period out of range */
 
 /****************************************************************************************
 *                              GLOBAL VARIABLES                                        *

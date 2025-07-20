@@ -29,6 +29,22 @@ TIM_Instace in hwunit
         -How to get mask of TIM_CHANNEL_x = x<<2 so we will use this mechanisim to get bit position for status array
         (TIM_CHANNEL >> 2) get the bit position x then 1 << x to enable corresponding status
 
+// 20/7/2025
+- Update SetOutputToIdle
+ - Solution Using Force output compare function 
+ ```c
+ case TIM_Channel_2:
+            if (Pwm_ChannelConfig[ChannelId].IdleState == PWM_HIGH) {
+                TIM_ForcedOC2Config(TIM_Instance, TIM_ForcedAction_Active);    // Force HIGH
+            } else {
+                TIM_ForcedOC2Config(TIM_Instance, TIM_ForcedAction_InActive);  // Force LOW
+            }
+ ```
+- Add parameter IdleStateSet for checking if idle state is set
+    - **Note** if set can call PWM_SetDutyCycle will work with the last duty cycle   
+- Remove unused parameter in channel config
+- Update test
+
 
 - Can't do 
  [SWS_Pwm_10051]
