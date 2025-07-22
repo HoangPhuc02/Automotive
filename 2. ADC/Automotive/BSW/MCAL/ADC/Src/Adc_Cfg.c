@@ -1,4 +1,4 @@
-/****************************************************************************************
+ /****************************************************************************************
 *                                ADC_CFG.C                                              *
 ****************************************************************************************
 * File Name   : Adc_Cfg.c
@@ -172,8 +172,16 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_HwUnitId = ADC_INSTANCE_1,                               /* ADC Hardware Unit 0 (ADC1) */
         .Adc_GroupId = 0,                                /* Group 0 (internally Group 1) */
         .Adc_GroupPriority = 1,                          /* Highest priority */
-        .Adc_GroupAccessMode = ADC_ACCESS_MODE_SINGLE,
-        .Adc_GroupConvMode = ADC_CONV_MODE_CONTINUOUS,
+        // .Adc_GroupAccessMode = ADC_ACCESS_MODE_SINGLE,
+        // .Adc_ValueResultSize = 2,
+        // .Adc_StreamNumSamples = 1,     
+
+        .Adc_GroupAccessMode = ADC_ACCESS_MODE_STREAMING,
+        .Adc_StreamNumSamples = 4, 
+        .Adc_ValueResultSize = 8,    
+        
+        .Adc_GroupConvMode = ADC_CONV_MODE_ONESHOT,
+        // .Adc_GroupConvMode = ADC_CONV_MODE_CONTINUOUS,
         .Adc_GroupReplacement = ADC_GROUP_REPL_ABORT_RESTART,
         .Adc_Status = ADC_IDLE,
         .Adc_ResultAlignment = ADC_ALIGN_RIGHT,
@@ -182,13 +190,15 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_TriggerSource = ADC_TRIGG_SRC_SW,
         .Adc_HwTriggerSignal = ADC_HW_TRIG_RISING_EDGE,
         .Adc_HwTriggerTimer = 0,
-        .Adc_StreamBufferMode = ADC_STREAM_BUFFER_LINEAR,
-        .Adc_StreamNumSamples = 1,                       /* 4 samples per channel */
+        // .Adc_StreamBufferMode = ADC_STREAM_BUFFER_LINEAR,
+        .Adc_StreamBufferMode = ADC_STREAM_BUFFER_CIRCULAR,
+                  /* 4 samples per channel */
+        
         .Adc_ValueResultPtr = Adc_Group1_ResultBuffer,
-        .Adc_ValueResultSize = 2,                        /* 2 channels × 4 samples = 8 */
+                     /* 2 channels × 4 samples = 8 */
         .Adc_SetupBufferFlag = 0,
         .Adc_NotificationCb = Adc_Group1_Notification,
-        .Adc_NotificationEnable = ADC_NOTIFICATION_ENABLE,
+        .Adc_NotificationEnable = ADC_NOTIFICATION_DISABLE,
         .Adc_InterruptType = ADC_HW_DMA
     },
     
@@ -197,23 +207,23 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_HwUnitId = ADC_INSTANCE_1,                               /* ADC Hardware Unit 0 (ADC1) */
         .Adc_GroupId = 1,                                /* Group 1 (internally Group 2) */
         .Adc_GroupPriority = 2,                          /* Medium priority */
-        .Adc_GroupAccessMode = ADC_ACCESS_MODE_SINGLE,
+        .Adc_GroupAccessMode = ADC_ACCESS_MODE_STREAMING,
         .Adc_GroupConvMode = ADC_CONV_MODE_CONTINUOUS,
         .Adc_GroupReplacement = ADC_GROUP_REPL_ABORT_RESTART,
         .Adc_Status = ADC_IDLE,
         .Adc_ResultAlignment = ADC_ALIGN_RIGHT,
-        .Adc_ChannelGroup = (Adc_ChannelDefType*)Adc_ChannelGroup2,
-        .Adc_NbrOfChannel = ADC_CHANNEL_GROUP_2_SIZE,    /* 3 channels */
+        .Adc_ChannelGroup = (Adc_ChannelDefType*)Adc_ChannelGroup1,
+        .Adc_NbrOfChannel = 2,    /* 2 channels */
         .Adc_TriggerSource = ADC_TRIGG_SRC_SW,
         .Adc_HwTriggerSignal = ADC_HW_TRIG_RISING_EDGE,
         .Adc_HwTriggerTimer = 0,
         .Adc_StreamBufferMode = ADC_STREAM_BUFFER_LINEAR,
-        .Adc_StreamNumSamples = 1,
-        .Adc_ValueResultPtr = Adc_Group2_ResultBuffer,
-        .Adc_ValueResultSize = 1,                        /* 3 channels × 2 samples = 6 */
+        .Adc_StreamNumSamples = 4,
+        .Adc_ValueResultPtr = Adc_Group1_ResultBuffer,
+        .Adc_ValueResultSize = 8,                        /* 3 channels × 2 samples = 6 */
         .Adc_SetupBufferFlag = 0,
-        .Adc_NotificationCb = Adc_Group2_Notification,
-        .Adc_NotificationEnable = ADC_NOTIFICATION_ENABLE,
+        .Adc_NotificationCb = Adc_Group1_Notification,
+        .Adc_NotificationEnable = ADC_NOTIFICATION_DISABLE,
         .Adc_InterruptType = ADC_HW_DMA
     },
     
@@ -308,8 +318,9 @@ Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS] =
         //.AdcHW_Prescale = ADC_CLOCK_PRESCALER,       /* Clock prescaler */
         .AdcHw_QueueEnable = ADC_ENABLE_QUEUING,         /* Queue enabled */
         .AdcHw_PriorityEnable = ADC_PRIORITY_IMPLEMENTATION,
-        .AdcHw_DMAAvailable = ADC_DMA_AVAILABLE,         /* DMA available */
-
+        // .AdcHw_DMAAvailable = ADC_DMA_AVAILABLE,         /* DMA available */
+        // Test
+        .AdcHw_DMAAvailable = ADC_DMA_NOT_AVAILABLE,     /* DMA not available */
     },
     
     /* ADC Hardware Unit 1 (ADC2) */

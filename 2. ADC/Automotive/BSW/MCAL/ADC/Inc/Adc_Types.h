@@ -20,14 +20,6 @@
 #include "Std_Types.h"
 #include "stm32f10x_adc.h"
 #include "stm32f10x.h"
-
-/****************************************************************************************
-*                               VERSION INFORMATION                                    *
-****************************************************************************************/
-#define ADC_SW_MAJOR_VERSION    2
-#define ADC_SW_MINOR_VERSION    2
-#define ADC_SW_PATCH_VERSION    0
-
 /****************************************************************************************
 *                                 FEATURE MACROS                                       *
 ****************************************************************************************/
@@ -353,27 +345,27 @@ typedef struct
 typedef struct
 {
     /* Basic Group Information */
-    Adc_HwUnitType          Adc_HwUnitId;           /*!< Hardware unit ID */
-    Adc_GroupType           Adc_GroupId;            /*!< Group ID */
-    Adc_GroupPriorityType   Adc_GroupPriority;      /*!< Group priority */
+    const Adc_HwUnitType          Adc_HwUnitId;           /*!< Hardware unit ID */
+    const Adc_GroupType           Adc_GroupId;            /*!< Group ID */
+    const Adc_GroupPriorityType   Adc_GroupPriority;      /*!< Group priority */
     
     /* Conversion Configuration */
-    Adc_GroupAccessModeType Adc_GroupAccessMode;    /*!< Access mode */
-    Adc_GroupConvModeType   Adc_GroupConvMode;      /*!< Conversion mode */
-    Adc_GroupReplacementType Adc_GroupReplacement;  /*!< Replacement mechanism */
+    const Adc_GroupAccessModeType Adc_GroupAccessMode;    /*!< Access mode */
+    const Adc_GroupConvModeType   Adc_GroupConvMode;      /*!< Conversion mode */
+    const Adc_GroupReplacementType Adc_GroupReplacement;  /*!< Replacement mechanism */
     
     /* Status and Alignment */
-    Adc_StatusType          Adc_Status;             /*!< Current status */
-    Adc_ResultAlignmentType Adc_ResultAlignment;    /*!< Result alignment */
+    volatile Adc_StatusType          Adc_Status;             /*!< Current status */
+    const Adc_ResultAlignmentType Adc_ResultAlignment;    /*!< Result alignment */
     
     /* Channel Configuration */
-    Adc_ChannelDefType*     Adc_ChannelGroup;       /*!< Channel array */
-    Adc_ChannelType         Adc_NbrOfChannel;       /*!< Number of channels */
+    const Adc_ChannelDefType*     Adc_ChannelGroup;       /*!< Channel array */
+    const Adc_ChannelType         Adc_NbrOfChannel;       /*!< Number of channels */
     
     /* Trigger Configuration */
-    Adc_TriggerSourceType   Adc_TriggerSource;      /*!< Trigger source */
-    Adc_HwTriggerSignalType Adc_HwTriggerSignal;    /*!< HW trigger signal */
-    Adc_HwTriggerTimerType  Adc_HwTriggerTimer;     /*!< HW trigger timer */
+    const Adc_TriggerSourceType   Adc_TriggerSource;      /*!< Trigger source */
+    const Adc_HwTriggerSignalType Adc_HwTriggerSignal;    /*!< HW trigger signal */
+    const Adc_HwTriggerTimerType  Adc_HwTriggerTimer;     /*!< HW trigger timer */
     
     /* Streaming Configuration */
     Adc_StreamBufferModeType Adc_StreamBufferMode;  /*!< Buffer mode */
@@ -383,6 +375,7 @@ typedef struct
     Adc_ValueGroupType*     Adc_ValueResultPtr;     /*!< Result buffer pointer */
     uint16                  Adc_ValueResultSize;    /*!< Result buffer size */
     uint8                   Adc_SetupBufferFlag;   /*!< Check buffer is reset 1: Reset, 0: Not reset yet*/
+    
     /* Notification Configuration */
     Adc_NotificationCallBack Adc_NotificationCb;    /*!< Notification callback */
     uint8                    Adc_NotificationEnable; /*!< Notification enable flag */
@@ -391,22 +384,32 @@ typedef struct
 } Adc_GroupDefType;
 
 /**
+ * @brief   ADC DMA availability
+ * @typedef enum
+ * @details Hardware DMA availability for ADC
+ */
+typedef enum 
+{
+    ADC_DMA_AVAILABLE           = STD_ON , /*!< ADC DMA available*/
+    ADC_DMA_NOT_AVAILABLE       = STD_OFF /*!< ADC DMA not available*/
+}Adc_HwDmaAvailable;
+
+/**
  * @brief   Adc_HwUnitDefType
  * @typedef struct
  * @details Hardware unit definition structure
  */
 typedef struct
 {
-    Adc_HwUnitType          AdcHW_UnitId;           /*!< Hardware unit ID */
-    // Adc_PrescaleType        AdcHW_Prescale;         /*!< Clock prescaler */
-    
+    const Adc_HwUnitType                  AdcHW_UnitId;           /*!< Hardware unit ID */
+
     /* Queue Configuration */
-    uint8                   AdcHw_QueueEnable;      /*!< Queue enable flag */
-    Adc_PriorityImplementationType AdcHw_PriorityEnable; /*!< Priority implementation */
+    uint8                                 AdcHw_QueueEnable;      /*!< Queue enable flag */
+    const Adc_PriorityImplementationType  AdcHw_PriorityEnable; /*!< Priority implementation */
 
     
     /* Hardware Features */
-    uint8                   AdcHw_DMAAvailable;     /*!< DMA availability ADC_DMA_NOT_AVAILABLE or ADC_DMA_AVAILABLE */
+    const Adc_HwDmaAvailable              AdcHw_DMAAvailable;     /*!< DMA availability ADC_DMA_NOT_AVAILABLE or ADC_DMA_AVAILABLE */
 } Adc_HwUnitDefType;
 
 /**
@@ -419,7 +422,7 @@ typedef struct
 {
     /* Hardware Units Configuration */
     const Adc_HwUnitDefType* HwUnits;       /*!< Hardware units array */
-    uint8                   NumHwUnits;     /*!< Number of hardware units */
+    uint8                    NumHwUnits;     /*!< Number of hardware units */
     
     /* Groups Configuration */
     const Adc_GroupDefType* Groups;         /*!< Groups array */
@@ -438,7 +441,7 @@ typedef struct
  * @return Pointer to ADC_TypeDef structure
  */
 #define ADC_HW_GET_MODULE_ID(id) \
-    ((id == ADC_INSTANCE_1) ? ADC1 : (id == ADC_INSTANCE_2) ? ADC2 : ((ADC_TypeDef*)0))
+    ((id == ADC_INSTANCE_1) ? ADC1 : (id == ADC_INSTANCE_2) ? ADC2 : NULL_PTR)
 
 /**
  * @brief Get DMA channel from ADC unit ID
@@ -458,11 +461,11 @@ typedef struct
  */
 typedef struct
 {
-    Adc_StatusType          Status;                 /*!< Current group status */
-    Adc_ChannelType         CurrentChannelId;       /*!< Current converting channel */
-    Adc_StreamNumSampleType SampleCounter;         /*!< Current sample count */
-    uint16                  BufferIndex;            /*!< Current buffer index */
-    uint8                   NotificationPending;    /*!< Notification pending flag */
+    volatile Adc_StatusType          Status;                 /*!< Current group status */
+    volatile Adc_ChannelType         CurrentChannelId;       /*!< Current converting channel */
+    volatile Adc_StreamNumSampleType SampleCounter;         /*!< Current sample count */
+    volatile uint16                  BufferIndex;            /*!< Current buffer index */
+    volatile uint8                   NotificationPending;    /*!< Notification pending flag */
     
 } Adc_RuntimeGroupType;
 
@@ -473,22 +476,24 @@ typedef struct
  */
 typedef enum 
 {
-    HW_STATE_IDLE,
-    HW_STATE_SW,
-    HW_STATE_HW
-} HwUnitState;
+    HW_STATE_IDLE,      /*!< No conversion in progress (neither SW nor HW triggered) */
+    HW_STATE_SW,        /*!< SW conversion in progress */
+    HW_STATE_HW         /*!< HW conversion in progress, in this state sw conversion is not allow to takeplace*/
+} Adc_HwUnitStateType;
+
 typedef struct
 {
-    Adc_GroupType           CurrentGroupId;         /*!< Currently active group */
-    HwUnitState             HwUnitBusy;             /*!< Hardware unit busy flag */
+    volatile Adc_GroupType           CurrentGroupId;         /*!< Currently active group */
+    volatile Adc_HwUnitStateType     HwUnitState;             /*!< Hardware unit state flag */
     
     /* Used for queue and sw conversion*/
-    Adc_GroupType*          QueueGroup;             /*!< Group queue*/
-    Adc_GroupType           QueueMaxSize;           /*!< Group queue max size*/ 
-    Adc_GroupType           QueueHead;              /*!< Queue head index */
-    Adc_GroupType           QueueTail;              /*!< Queue tail index */
-    Adc_GroupType           QueueCount;             /*!< Number of queued groups */
 
+    volatile Adc_GroupType*          QueueGroup;             /*!< Group queue*/
+    volatile Adc_GroupType           QueueMaxSize;           /*!< Group queue max size*/ 
+    volatile Adc_GroupType           QueueHead;              /*!< Queue head index */
+    volatile Adc_GroupType           QueueTail;              /*!< Queue tail index */
+    volatile Adc_GroupType           QueueCount;             /*!< Number of queued groups */
+    
     
 } Adc_RuntimeHwUnitType;
 

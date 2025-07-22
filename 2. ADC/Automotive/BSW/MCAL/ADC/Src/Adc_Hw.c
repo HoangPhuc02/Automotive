@@ -26,19 +26,14 @@
 *                                 GLOBAL VARIABLES                                     *
 ****************************************************************************************/
 
-
-/* Configuration arrays */
-// extern Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS];
-// extern Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS];
-
 /****************************************************************************************
 *                                 QUEUE CONFIGURATIONS                                 *
 ****************************************************************************************/
 /* Queue for ADC Hardware Unit 1 */
-static Adc_GroupType AdcHw_GroupQueueHw1[ADC_DEFAULT_QUEUE_SIZE] = {0};
+static Adc_GroupType AdcHw_GroupQueueHw1[ADC1_QUEUE_SIZE] = {ADC_INVALID_GROUP_ID};
 
 /* Queue for ADC Hardware Unit 2 */
-static Adc_GroupType AdcHw_GroupQueueHw2[ADC_DEFAULT_QUEUE_SIZE] = {0};
+static Adc_GroupType AdcHw_GroupQueueHw2[ADC2_QUEUE_SIZE] = {ADC_INVALID_GROUP_ID};
 
 /* Runtime data arrays */
 static volatile Adc_RuntimeGroupType Adc_RuntimeGroups[ADC_MAX_GROUPS] = {0};
@@ -46,16 +41,17 @@ static volatile Adc_RuntimeHwUnitType Adc_RuntimeHwUnits[ADC_MAX_HW_UNITS] =
 {
     {
         .CurrentGroupId = ADC_INVALID_GROUP_ID,
-        .HwUnitBusy     = HW_STATE_IDLE,
+        .HwUnitState     = HW_STATE_IDLE,
 
         .QueueGroup     = AdcHw_GroupQueueHw1,        
         .QueueMaxSize   = ADC_DEFAULT_QUEUE_SIZE,         
         .QueueHead      = 0,              
-        .QueueTail      = 0,             
+        .QueueTail      = 0,
+        .QueueCount     = 0,             
     },
     {
         .CurrentGroupId = ADC_INVALID_GROUP_ID,
-        .HwUnitBusy     = HW_STATE_IDLE,
+        .HwUnitState     = HW_STATE_IDLE,
 
         .QueueGroup     = AdcHw_GroupQueueHw2,            
         .QueueMaxSize   = ADC_DEFAULT_QUEUE_SIZE,         
@@ -64,10 +60,6 @@ static volatile Adc_RuntimeHwUnitType Adc_RuntimeHwUnits[ADC_MAX_HW_UNITS] =
         .QueueCount     = 0,
     }
 };
-
-
-
-
 /* Deferred processing variables */
 static volatile uint8 AdcHw_DeferredProcessingFlag[ADC_MAX_HW_UNITS] = {0};
 static volatile Adc_HwUnitType AdcHw_PendingUnits[ADC_MAX_HW_UNITS];
@@ -107,7 +99,7 @@ static inline Std_ReturnType AdcHw_ConfigureHwModuleGroupIT(Adc_HwUnitType HwUni
 Std_ReturnType AdcHw_Init(Adc_HwUnitType HwUnitId)
 {
     /* Validate hardware unit */
-    if (!AdcHw_ValidateHwUnit(HwUnitId))
+    if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)
     {
         return E_NOT_OK;
     }
@@ -169,7 +161,7 @@ Std_ReturnType AdcHw_Init(Adc_HwUnitType HwUnitId)
 Std_ReturnType AdcHw_DeInit(Adc_HwUnitType HwUnitId)
 {
     /* Validate hardware unit */
-    if (!AdcHw_ValidateHwUnit(HwUnitId))
+    if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)
     {
         return E_NOT_OK;
     }
@@ -205,13 +197,343 @@ Std_ReturnType AdcHw_DeInit(Adc_HwUnitType HwUnitId)
     return E_OK;
 }
 
+
+/****************************************************************************************
+*                               SW CONVERSION CONTROL FUNCTIONS                        *
+****************************************************************************************/
+/**
+ * @brief Start software-triggered conversion
+ * @param[in] HwUnitId ADC hardware unit ID
+ * @param[in] GroupId ADC group ID
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note : 
+ * - Call from start software
+ * - Go to next sw conversion when stop last session if using QUEUE
+ * - Recall function after hw finish if using QUEUE
+ */
+Std_ReturnType AdcHw_StartSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+{
+    /* Validate parameters */
+    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE))
+    {
+        return E_NOT_OK;
+    }
+    /* Check if hardware unit is busy */
+    /* If Hw trigger is enabled not allow any conversion request*/
+    if (AdcHw_GetHwUnitState(HwUnitId) == HW_STATE_HW)
+    {
+        return E_NOT_OK;
+    }
+
+    #if (ADC_ENABLE_QUEUING == STD_ON)
+    // Check is it called from start software not from recall or stop software 
+        if(Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId != GroupId)
+        {
+            /* Add to queue if enable*/
+            if(AdcHw_AddGroupToQueue(HwUnitId, GroupId) == E_NOT_OK)
+                return E_NOT_OK;
+        }
+    #else 
+    // Check if there is any conversion on progess
+        if(Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId != 0)  
+            return E_NOT_OK;
+    #endif
+
+    
+    /* Get ADC hardware module */
+    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
+    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[GroupId];
+    const Adc_HwUnitDefType* HwUnitConfig = &Adc_HwUnitConfig[HwUnitId];
+    if (ADCx == NULL_PTR)
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Setting adc hardware before make conversion*/
+    if (AdcHw_ConfigureGroup(HwUnitId, GroupId) != E_OK)
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Update runtime data */
+    /* Register group to runtime hw*/
+    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = GroupId;
+    Adc_RuntimeHwUnits[HwUnitId].HwUnitState = HW_STATE_SW;
+    
+    /** Reset Runtime Group status */
+    Adc_RuntimeGroups[GroupId].CurrentChannelId = 0;
+    Adc_RuntimeGroups[GroupId].SampleCounter = 0;
+    Adc_RuntimeGroups[GroupId].BufferIndex = 0;
+    
+    /* Enable interrupts */
+    if (HwUnitConfig->AdcHw_DMAAvailable && GroupConfig->Adc_InterruptType == ADC_HW_DMA)
+    {
+        #if (ADC_ENABLE_DMA == STD_ON)
+            if (AdcHw_InitDma(HwUnitId, GroupId) != E_OK)
+            {
+                return E_NOT_OK;
+            }
+            AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
+            AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_DMA_TC);
+            ADC_DMACmd(ADCx, ENABLE);
+        #else    
+            AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
+        #endif
+
+    }
+    else 
+    {
+        AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
+    }
+    AdcHw_SetGroupStatus(GroupId, ADC_BUSY);
+    ADC_Cmd(ADCx, ENABLE);
+    /* Start conversion */
+    ADC_SoftwareStartConvCmd(ADCx, ENABLE);
+    
+    return E_OK;
+}
+
+/**
+ * @brief Stop software-triggered conversion
+ * @param[in] HwUnitId ADC hardware unit ID
+ * @param[in] GroupId ADC group ID
+ * @return E_OK if successful, E_NOT_OK otherwise
+ */
+Std_ReturnType AdcHw_StopSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+{
+    /* Validate parameters */
+    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE))
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Check if this group is currently converting */
+    if (Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId != GroupId)
+    {
+        #if (ADC_ENABLE_QUEUING == STD_ON)
+        /* Try to remove from queue */
+        return AdcHw_RemoveGroupFromQueue(HwUnitId, GroupId);
+        #else
+        return E_NOT_OK;
+        #endif
+    }
+
+    /* Get ADC hardware module first - common for both paths */
+    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
+    if (ADCx == NULL)
+    {
+        return E_NOT_OK;
+    }
+    
+    #if (ADC_ENABLE_DMA == STD_ON)
+    /* Disable DMA if it was enabled for this group */
+    if (Adc_HwUnitConfig[HwUnitId].AdcHw_DMAAvailable && 
+        Adc_GroupConfig[GroupId].Adc_InterruptType == ADC_HW_DMA)
+    {
+        AdcHw_DeInitDma(HwUnitId);
+    }
+    else
+    {
+        AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
+    }
+    #endif
+    /* Stop conversion - common hardware operation */
+    ADC_SoftwareStartConvCmd(ADCx, DISABLE);
+    ADC_Cmd(ADCx, DISABLE);
+    
+    #if (ADC_ENABLE_QUEUING == STD_ON)
+        /* Try to process next group from queue if available */
+        Adc_GroupType NextGroup = AdcHw_GetNextGroupFromQueue(HwUnitId);
+        if (NextGroup != ADC_INVALID_GROUP_ID)
+        {
+            Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = NextGroup;
+            return AdcHw_StartSwConversion(HwUnitId, NextGroup);
+        }
+    #endif
+    
+    /* If no next group or queuing disabled, reset everything */
+    AdcHw_ResetHwRuntime(HwUnitId);
+    AdcHw_SetGroupStatus(GroupId, ADC_IDLE);
+    return E_OK;
+}
+
+#if (ADC_ENABLE_QUEUING == STD_ON)
+/**
+ * @brief Recall software-triggered conversion  
+ * @param[in] HwUnitId ADC hardware unit ID
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note : call after finishing hw conversion or hw conversion is stopped
+ *         Only used when queue enabled
+ */
+Std_ReturnType AdcHw_RecallSwConversion(Adc_HwUnitType HwUnitId)
+{
+    // No queue in the list 
+    if(Adc_RuntimeHwUnits[HwUnitId].QueueCount == 0)
+    {
+        return E_NOT_OK;
+    }
+    
+    Adc_RuntimeHwUnits[HwUnitId].HwUnitState = HW_STATE_SW;
+    // Adc_RuntimeGroups[GroupId].Status = ADC_IDLE;
+
+    // Get the group id from head of the queue
+    Adc_GroupType CurrentGroup = Adc_RuntimeHwUnits[HwUnitId].QueueGroup[Adc_RuntimeHwUnits[HwUnitId].QueueHead];
+    if(CurrentGroup != ADC_INVALID_GROUP_ID)
+    {
+        Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = CurrentGroup;
+        AdcHw_StartSwConversion(HwUnitId, CurrentGroup);
+    }
+    
+    return E_OK;
+}
+ #endif
+/****************************************************************************************
+*                               HW CONVERSION CONTROL FUNCTIONS                        *
+****************************************************************************************/
+/**
+ * @brief Start hardware-triggered conversion
+ * @param[in] HwUnitId ADC hardware unit ID
+ * @param[in] GroupId ADC group ID
+ * @return E_OK if successful, E_NOT_OK otherwise
+ */
+// TODO check config for hw
+Std_ReturnType AdcHw_StartHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+{
+    /* Validate parameters */
+    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE))
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Get ADC hardware module */
+    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
+    if (ADCx == NULL)
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Configure group */
+    if (AdcHw_ConfigureGroup(HwUnitId, GroupId) != E_OK)
+    {
+        return E_NOT_OK;
+    }
+    // Already have a trigger
+    if (AdcHw_GetHwUnitState(HwUnitId) == HW_STATE_HW)
+    {
+        return E_NOT_OK;
+    }
+
+    AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_DMA_TC);
+    // should be make into inline function
+    ADC_Cmd(ADCx,DISABLE);
+    /* Get group configuration */
+    Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[GroupId];
+    
+    /* Configure hardware trigger */
+    // TODO get trigger source hw and set
+    // uint32 TriggerSource = AdcHw_GetHwTriggerSource(GroupConfig->Adc_TriggerSource);
+    ADC_ExternalTrigConvCmd(ADCx, ENABLE);
+    
+    /* Configure trigger signal */
+    if (GroupConfig->Adc_HwTriggerSignal == ADC_HW_TRIG_RISING_EDGE)
+    {
+        /* Configure for rising edge */
+    }
+    else if (GroupConfig->Adc_HwTriggerSignal == ADC_HW_TRIG_FALLING_EDGE)
+    {
+        /* Configure for falling edge */
+    }
+    else
+    {
+        /* Configure for both edges */
+    }
+    
+    /* Update runtime data */
+    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = GroupId;
+    // Adc_RuntimeHwUnits[HwUnitId].HwUnitState = TRUE;
+    Adc_RuntimeHwUnits[HwUnitId].HwUnitState = HW_STATE_HW;
+    AdcHw_SetGroupStatus(GroupId, ADC_BUSY);
+    
+    /* Enable interrupts */
+
+    AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
+    ADC_Cmd(ADCx,ENABLE);
+    return E_OK;
+}
+
+/**
+ * @brief Stop hardware-triggered conversion
+ * @param[in] HwUnitId ADC hardware unit ID
+ * @param[in] GroupId ADC group ID
+ * @return E_OK if successful, E_NOT_OK otherwise
+ */
+Std_ReturnType AdcHw_StopHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+{
+    /* Validate parameters */
+    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE))
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Get ADC hardware module */
+    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
+    if (ADCx == NULL)
+    {
+        return E_NOT_OK;
+    }
+    
+    /* Disable hardware trigger */
+    ADC_ExternalTrigConvCmd(ADCx, DISABLE);
+    
+    /* Disable interrupts */
+    AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
+    
+    /* Update runtime data */
+    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
+    // Adc_RuntimeHwUnits[HwUnitId].HwUnitState = FALSE;
+    Adc_RuntimeHwUnits[HwUnitId].HwUnitState = HW_STATE_IDLE;
+    AdcHw_SetGroupStatus(GroupId, ADC_IDLE);
+    #if (ADC_ENABLE_QUEUING == STD_ON)
+        AdcHw_RecallSwConversion(HwUnitId);
+    #endif
+    return E_OK;
+}
+
+
+/****************************************************************************************
+*                                  CONFIGURATION FUNCTIONS                              *
+****************************************************************************************/
+/**
+ * @brief Configure ADC channels for a group
+ * @param[in] HwUnitId ADC hardware unit ID
+ * @param[in] GroupId ADC group ID
+ * @return E_OK if successful, E_NOT_OK otherwise
+ */
+Std_ReturnType AdcHw_ConfigureChannels(ADC_TypeDef* ADCx, Adc_HwUnitDefType* HwUnitConfig, Adc_GroupDefType* GroupConfig)
+{
+    if(GroupConfig->Adc_InterruptType == ADC_HW_EOC)
+    {    
+        // TODO Check based on the id not default
+        const Adc_ChannelDefType* ChannelConfig = &GroupConfig->Adc_ChannelGroup[0];
+        ADC_RegularChannelConfig(ADCx, ChannelConfig->Adc_ChannelId, 1, ChannelConfig->Adc_ChannelSampTime);
+    }
+    else
+    {
+        /* Configure each channel in the group */
+        for (uint8 i = 0; i < GroupConfig->Adc_NbrOfChannel; i++)
+        {
+            const Adc_ChannelDefType* ChannelConfig = &GroupConfig->Adc_ChannelGroup[i];
+            ADC_RegularChannelConfig(ADCx, ChannelConfig->Adc_ChannelId, i + 1, ChannelConfig->Adc_ChannelSampTime);
+        }
+    }
+    return E_OK;
+}
 /**
  * @brief Configure ADC hardware module for a specific group
  * @param[in] HwUnitId ADC hardware unit ID
  * @param[in] GroupId ADC group ID
  * @return E_OK if successful, E_NOT_OK otherwise
  */
-
 Std_ReturnType AdcHw_ConfigureGroup(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
 {
 
@@ -261,330 +583,6 @@ Std_ReturnType AdcHw_ConfigureGroup(Adc_HwUnitType HwUnitId, Adc_GroupType Group
     return E_OK;
 }
 
-/****************************************************************************************
-*                               SW CONVERSION CONTROL FUNCTIONS                        *
-****************************************************************************************/
-/**
- * @brief Start software-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
- * @note : 
- * - Call from start software
- * - Go to next sw conversion when stop last session if using QUEUE
- * - Recall function after hw finish if using QUEUE
- */
-Std_ReturnType AdcHw_StartSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
-{
-    /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId) || !AdcHw_ValidateGroup(GroupId))
-    {
-        return E_NOT_OK;
-    }
-    /* Check if hardware unit is busy */
-    if (AdcHw_IsUnitBusy(HwUnitId) == HW_STATE_HW)
-    {
-        return E_NOT_OK;
-    }
-    /* Check if hardware unit is busy */
-    #if (ADC_ENABLE_QUEUING == STD_ON)
-    // Check is it called from start software not from recall or stop software 
-        if(Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId != GroupId)
-        {
-            /* Add to queue if enable*/
-            if(AdcHw_AddGroupToQueue(HwUnitId, GroupId) == E_NOT_OK)
-                return E_NOT_OK;
-            if(Adc_RuntimeHwUnits[HwUnitId].QueueCount > 1)
-                return E_NOT_OK;
-        } 
-    #endif
-    //first init
-    // recall
-    // stop previous sw
-        
-
-    
-    /* Get ADC hardware module */
-    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[GroupId];
-    const Adc_HwUnitDefType* HwUnitConfig = &Adc_HwUnitConfig[HwUnitId];
-    if (ADCx == NULL)
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Configure group */
-    if (AdcHw_ConfigureGroup(HwUnitId, GroupId) != E_OK)
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Update runtime data */
-    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = GroupId;
-    Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = HW_STATE_SW;
-    AdcHw_SetGroupStatus(GroupId, ADC_BUSY);
-    Adc_RuntimeGroups[GroupId].CurrentChannelId = 0;
-    Adc_RuntimeGroups[GroupId].SampleCounter = 0;
-    Adc_RuntimeGroups[GroupId].BufferIndex = 0;
-    
-    /* Enable interrupts */
-    if(GroupConfig->Adc_InterruptType == ADC_HW_EOC)
-    {
-        AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
-    }
-    else if (HwUnitConfig->AdcHw_DMAAvailable)
-    {
-        #if (ADC_ENABLE_DMA == STD_ON)
-            if (AdcHw_InitDma(HwUnitId, GroupId) != E_OK)
-            {
-                return E_NOT_OK;
-            }
-           
-            AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
-            AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_DMA_TC);
-            ADC_DMACmd(ADCx, ENABLE);
-        #else    
-            AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
-        #endif
-
-    }
-    else 
-    {
-        AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
-    }
-    ADC_Cmd(ADCx, ENABLE);
-    /* Start conversion */
-    ADC_SoftwareStartConvCmd(ADCx, ENABLE);
-    
-    return E_OK;
-}
-
-/**
- * @brief Stop software-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_StopSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
-{
-    /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId) || !AdcHw_ValidateGroup(GroupId))
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Check if this group is currently converting */
-    if (Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId != GroupId)
-    {
-        #if (ADC_ENABLE_QUEUING == STD_ON)
-        /* Try to remove from queue */
-        return AdcHw_RemoveGroupFromQueue(HwUnitId, GroupId);
-        #else
-        return E_NOT_OK;
-        #endif
-    }
-    
-    /* Get ADC hardware module */
-    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Stop conversion */
-    ADC_SoftwareStartConvCmd(ADCx, DISABLE);
-    ADC_Cmd(ADCx, DISABLE);
-
-    /* Disable interrupts */
-    // TODO check this
-    // AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
-
-    // remove group
-    #if (ADC_ENABLE_QUEUING == STD_ON)
-    /* Try to remove from queue */
-        return AdcHw_RemoveGroupFromQueue(HwUnitId, GroupId);
-    #endif
-    /* Update runtime data */
-    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
-    Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = HW_STATE_SW;
-    AdcHw_SetGroupStatus(GroupId, ADC_IDLE);
-
-    /* Start next conversion from queue if available */
-    #if (ADC_ENABLE_QUEUING == STD_ON)
-
-    Adc_GroupType NextGroup = AdcHw_GetNextGroupFromQueue(HwUnitId);
-    if (NextGroup != ADC_INVALID_GROUP_ID)
-    {
-        Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = NextGroup;
-        AdcHw_StartSwConversion(HwUnitId, NextGroup);
-    }
-    #endif
-    
-    return E_OK;
-}
-/****************************************************************************************
-*                               HW CONVERSION CONTROL FUNCTIONS                        *
-****************************************************************************************/
-/**
- * @brief Start hardware-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-// TODO check config for hw
-Std_ReturnType AdcHw_StartHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
-{
-    /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId) || !AdcHw_ValidateGroup(GroupId))
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Get ADC hardware module */
-    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Configure group */
-    if (AdcHw_ConfigureGroup(HwUnitId, GroupId) != E_OK)
-    {
-        return E_NOT_OK;
-    }
-    // Already have a trigger
-    if (AdcHw_IsUnitBusy(HwUnitId) == HW_STATE_HW)
-    {
-        return E_NOT_OK;
-    }
-
-    AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_DMA_TC);
-    // should be make into inline function
-    ADC_Cmd(ADCx,DISABLE);
-    /* Get group configuration */
-    Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[GroupId];
-    
-    /* Configure hardware trigger */
-    // TODO get trigger source hw and set
-    // uint32 TriggerSource = AdcHw_GetHwTriggerSource(GroupConfig->Adc_TriggerSource);
-    ADC_ExternalTrigConvCmd(ADCx, ENABLE);
-    
-    /* Configure trigger signal */
-    if (GroupConfig->Adc_HwTriggerSignal == ADC_HW_TRIG_RISING_EDGE)
-    {
-        /* Configure for rising edge */
-    }
-    else if (GroupConfig->Adc_HwTriggerSignal == ADC_HW_TRIG_FALLING_EDGE)
-    {
-        /* Configure for falling edge */
-    }
-    else
-    {
-        /* Configure for both edges */
-    }
-    
-    /* Update runtime data */
-    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = GroupId;
-    // Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = TRUE;
-    Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = HW_STATE_HW;
-    AdcHw_SetGroupStatus(GroupId, ADC_BUSY);
-    
-    /* Enable interrupts */
-
-    AdcHw_EnableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
-    ADC_Cmd(ADCx,ENABLE);
-    return E_OK;
-}
-
-/**
- * @brief Stop hardware-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_StopHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
-{
-    /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId) || !AdcHw_ValidateGroup(GroupId))
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Get ADC hardware module */
-    ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
-    {
-        return E_NOT_OK;
-    }
-    
-    /* Disable hardware trigger */
-    ADC_ExternalTrigConvCmd(ADCx, DISABLE);
-    
-    /* Disable interrupts */
-    AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
-    
-    /* Update runtime data */
-    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
-    // Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = FALSE;
-    Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = HW_STATE_IDLE;
-    AdcHw_SetGroupStatus(GroupId, ADC_IDLE);
-    #if (ADC_ENABLE_QUEUING == STD_ON)
-        AdcHw_RecallSwConversion(HwUnitId);
-    #endif
-    return E_OK;
-}
-/**
- * @note : call when finish hw conversion or hw conversion is stop by ADC_HWSTOPConversion
- */
-#if (ADC_ENABLE_QUEUING == STD_ON)
-Std_ReturnType AdcHw_RecallSwConversion(Adc_HwUnitType HwUnitId)
-{
-    // No queue in the list 
-    if(Adc_RuntimeHwUnits[HwUnitId].QueueCount == 0)
-    {
-        return E_NOT_OK;
-    }
-    Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = HW_STATE_SW;
-    // Adc_RuntimeGroups[GroupId].Status = ADC_IDLE;
-    Adc_GroupType CurrentGroup = Adc_RuntimeHwUnits[HwUnitId].QueueGroup[Adc_RuntimeHwUnits[HwUnitId].QueueHead];
-    if(CurrentGroup != ADC_INVALID_GROUP_ID)
-    {
-        Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = CurrentGroup;
-        AdcHw_StartSwConversion(HwUnitId, CurrentGroup);
-    }
-    
-    return E_OK;
-}
- #endif
-/****************************************************************************************
-*                                 CHANNEL CONFIGURATION FUNCTIONS                     *
-****************************************************************************************/
-/**
- * @brief Configure ADC channels for a group
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_ConfigureChannels(ADC_TypeDef* ADCx, Adc_HwUnitDefType* HwUnitConfig, Adc_GroupDefType* GroupConfig)
-{
-    if(GroupConfig->Adc_InterruptType == ADC_HW_EOC)
-    {    
-        // TODO Check based on the id not default
-        const Adc_ChannelDefType* ChannelConfig = &GroupConfig->Adc_ChannelGroup[0];
-        ADC_RegularChannelConfig(ADCx, ChannelConfig->Adc_ChannelId, 1, ChannelConfig->Adc_ChannelSampTime);
-    }
-    else
-    {
-        /* Configure each channel in the group */
-        for (uint8 i = 0; i < GroupConfig->Adc_NbrOfChannel; i++)
-        {
-            const Adc_ChannelDefType* ChannelConfig = &GroupConfig->Adc_ChannelGroup[i];
-            ADC_RegularChannelConfig(ADCx, ChannelConfig->Adc_ChannelId, i + 1, ChannelConfig->Adc_ChannelSampTime);
-        }
-    }
-    return E_OK;
-}
-
 
 /****************************************************************************************
 *                                 RESULT HANDLING FUNCTIONS                           *
@@ -601,7 +599,7 @@ Std_ReturnType AdcHw_ReadResult(Adc_HwUnitType HwUnitId,
                                Adc_ValueGroupType* ResultPtr)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId) || !AdcHw_ValidateGroup(GroupId) || (ResultPtr == NULL))
+    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE) || (ResultPtr == NULL))
     {
         return E_NOT_OK;
     }
@@ -640,28 +638,10 @@ Std_ReturnType AdcHw_ReadResult(Adc_HwUnitType HwUnitId,
  * @param[in] GroupId ADC group ID
  * @return Group status
  */
-
-// Adc_StatusType AdcHw_GetGroupStatus(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
-// {
-//     /*!< Validate parameters */
-//     if (!AdcHw_ValidateHwUnit(HwUnitId) || !AdcHw_ValidateGroup(GroupId))
-//     {
-//         return ADC_IDLE;
-//     }
-//     return Adc_RuntimeGroups[GroupId].Status;
-// }
-
-
-/**
- * @brief Get ADC group status
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return Group status
- */
 Adc_StatusType AdcHw_GetGroupRuntimeStatus(Adc_GroupType GroupId)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateGroup(GroupId))
+    if (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE)
     {
         return ADC_IDLE;
     }
@@ -687,7 +667,7 @@ inline void AdcHw_SetGroupStatus(Adc_GroupType GroupId, Adc_StatusType Status)
 Std_ReturnType AdcHw_ResetGroupRuntime(Adc_GroupType GroupId)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateGroup(GroupId))
+    if (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE)
     {
         return E_NOT_OK;
     }
@@ -710,11 +690,13 @@ Std_ReturnType AdcHw_ResetGroupRuntime(Adc_GroupType GroupId)
 Std_ReturnType AdcHw_ResetHwRuntime(Adc_HwUnitType HwUnitId)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId))
-    {
-        return E_NOT_OK;
-    }
+    if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)    return E_NOT_OK;
 
+
+    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
+    Adc_RuntimeHwUnits[HwUnitId].HwUnitState = HW_STATE_IDLE;
+
+    #if( ADC_ENABLE_QUEUING == STD_ON)
     /* Reset runtime data */
     if(Adc_RuntimeHwUnits[HwUnitId].QueueCount != 0)
     {
@@ -726,9 +708,8 @@ Std_ReturnType AdcHw_ResetHwRuntime(Adc_HwUnitType HwUnitId)
     Adc_RuntimeHwUnits[HwUnitId].QueueHead = 0;
     Adc_RuntimeHwUnits[HwUnitId].QueueTail = 0;
     Adc_RuntimeHwUnits[HwUnitId].QueueCount = 0;
-    Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
-    Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = HW_STATE_IDLE;
 
+    #endif
     return E_OK;
 }
 /**
@@ -739,7 +720,7 @@ Std_ReturnType AdcHw_ResetHwRuntime(Adc_HwUnitType HwUnitId)
 Adc_StreamNumSampleType AdcHw_GetGroupRuntimeSampCounter(Adc_GroupType GroupId)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateGroup(GroupId))
+    if (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE)
     {
         return 0;
     }
@@ -752,27 +733,23 @@ Adc_StreamNumSampleType AdcHw_GetGroupRuntimeSampCounter(Adc_GroupType GroupId)
  * @param[in] HwUnitId ADC hardware unit ID
  * @return TRUE if busy, FALSE if idle
  */
-HwUnitState AdcHw_IsUnitBusy(Adc_HwUnitType HwUnitId)
+Adc_HwUnitStateType inline AdcHw_GetHwUnitState(Adc_HwUnitType HwUnitId)
 {
-    /* Validate parameters */
-    // if (!AdcHw_ValidateHwUnit(HwUnitId))
-    // {
-    //     return FALSE;
-    // }
     
-    return Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy;
+    return Adc_RuntimeHwUnits[HwUnitId].HwUnitState;
 }
 
+// TODO : Remove cause no function used
 /**
  * @brief Get current converting channel
  * @param[in] HwUnitId ADC hardware unit ID
  * @param[in] GroupId ADC group ID
  * @return Current channel ID
  */
-Adc_ChannelType AdcHw_GetCurrentChannel(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+Adc_ChannelType inline AdcHw_GetCurrentChannel(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId) || !AdcHw_ValidateGroup(GroupId))
+    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE))
     {
         return ADC_INVALID_CHANNEL_ID;
     }
@@ -792,7 +769,7 @@ Adc_ChannelType AdcHw_GetCurrentChannel(Adc_HwUnitType HwUnitId, Adc_GroupType G
 Std_ReturnType AdcHw_EnableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptType)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId))
+    if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)
     {
         return E_NOT_OK;
     }
@@ -832,7 +809,7 @@ Std_ReturnType AdcHw_EnableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptTyp
 Std_ReturnType AdcHw_DisableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptType)
 {
     /* Validate parameters */
-    if (!AdcHw_ValidateHwUnit(HwUnitId))
+    if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)
     {
         return E_NOT_OK;
     }
@@ -871,6 +848,9 @@ Std_ReturnType AdcHw_DisableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptTy
  * @return void
  */
 
+ /****************************************************************************************
+*                           INTERRUPT HANDLER FUNCTIONS                                 *
+****************************************************************************************/
 void AdcHw_InterruptHandler(ADC_TypeDef* ADCx, Adc_HwUnitType HwUnitId)
 {
     #if (ADC_ENABLE_ISR_MONITORING == STD_ON)
@@ -878,7 +858,7 @@ void AdcHw_InterruptHandler(ADC_TypeDef* ADCx, Adc_HwUnitType HwUnitId)
     #endif
     
     /* Validate hardware unit */
-    if (!AdcHw_ValidateHwUnit(HwUnitId))
+    if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)
     {
         return;
     }
@@ -890,14 +870,12 @@ void AdcHw_InterruptHandler(ADC_TypeDef* ADCx, Adc_HwUnitType HwUnitId)
         return;
     }
         
-    /* Read conversion result */
-    Adc_ValueGroupType Result = ADC_GetConversionValue(ADCx);
-
-    /* Store result */
+    // Get buffer index
     uint16 BufferIndex = Adc_RuntimeGroups[CurrentGroup].BufferIndex;
     
+    // Write data to buffer index
     Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[CurrentGroup];
-    GroupConfig->Adc_ValueResultPtr[BufferIndex] = Result;
+    GroupConfig->Adc_ValueResultPtr[BufferIndex] =  ADC_GetConversionValue(ADCx);
     
     /* Handle channel sequencing */
     AdcHw_HandleChannelSequencing(HwUnitId, CurrentGroup);
@@ -919,10 +897,11 @@ void AdcHw_InterruptHandler(ADC_TypeDef* ADCx, Adc_HwUnitType HwUnitId)
 void AdcHw_DmaInterruptHandler(DMA_Channel_TypeDef* DMAx, Adc_HwUnitType HwUnitId)
 {
     /* Validate hardware unit */
-    if (!AdcHw_ValidateHwUnit(HwUnitId))
+    if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)
     {
         return;
     }
+
         
     /* Get current group */
     Adc_GroupType CurrentGroup = Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId;
@@ -931,9 +910,7 @@ void AdcHw_DmaInterruptHandler(DMA_Channel_TypeDef* DMAx, Adc_HwUnitType HwUnitI
     Adc_RuntimeGroups[CurrentGroup].CurrentChannelId = GroupConfig->Adc_NbrOfChannel - 1;
     Adc_RuntimeGroups[CurrentGroup].BufferIndex = GroupConfig->Adc_StreamNumSamples * GroupConfig->Adc_NbrOfChannel - 1;
     
-    GroupConfig->Adc_Status = ADC_STREAM_COMPLETED;
-    Adc_RuntimeGroups[CurrentGroup].Status = ADC_STREAM_COMPLETED;
-
+    AdcHw_SetGroupStatus(CurrentGroup, ADC_STREAM_COMPLETED);
     // call notification when done conversion
     AdcHw_CallNotification(CurrentGroup);
     // this should be fix in ver 3.0
@@ -947,6 +924,8 @@ void AdcHw_DmaInterruptHandler(DMA_Channel_TypeDef* DMAx, Adc_HwUnitType HwUnitI
     }
     else 
     {
+        ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
+        ADC_Cmd(ADCx, DISABLE);
         #if(ADC_ENABLE_QUEUING == STD_ON)
             /* Signal group completion for deferred processing */
             AdcHw_DeferredProcessingFlag[HwUnitId] = 1;
@@ -962,6 +941,7 @@ void AdcHw_DmaInterruptHandler(DMA_Channel_TypeDef* DMAx, Adc_HwUnitType HwUnitI
     // check if linear or one shot get out call next software
        
 }
+
 // CURRENT WORK
 // void call process next section
 /****************************************************************************************
@@ -987,7 +967,10 @@ Std_ReturnType AdcHw_AddGroupToQueue(Adc_HwUnitType HwUnitId, Adc_GroupType Grou
             Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId =  GroupId;
         }
         else 
-            Adc_RuntimeHwUnits[HwUnitId].QueueGroup[++Adc_RuntimeHwUnits[HwUnitId].QueueTail] = GroupId;
+        {
+            Adc_RuntimeHwUnits[HwUnitId].QueueTail = (++Adc_RuntimeHwUnits[HwUnitId].QueueTail == Adc_RuntimeHwUnits[HwUnitId].QueueMaxSize) ? 0 : Adc_RuntimeHwUnits[HwUnitId].QueueTail;
+            Adc_RuntimeHwUnits[HwUnitId].QueueGroup[Adc_RuntimeHwUnits[HwUnitId].QueueTail] = GroupId;
+        }
         return E_OK;
     }
     return E_NOT_OK;
@@ -999,6 +982,7 @@ Std_ReturnType AdcHw_AddGroupToQueue(Adc_HwUnitType HwUnitId, Adc_GroupType Grou
  * @param[in] GroupId ADC group ID
  * @return E_OK if successful, E_NOT_OK otherwise
  */
+// TODO : Need to fix this and document this
 Std_ReturnType AdcHw_RemoveGroupFromQueue(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
 {
     Adc_GroupType index = AdcHw_IsGroupInQueue(HwUnitId, GroupId);
@@ -1006,13 +990,13 @@ Std_ReturnType AdcHw_RemoveGroupFromQueue(Adc_HwUnitType HwUnitId, Adc_GroupType
     {
         if(index == Adc_RuntimeHwUnits[HwUnitId].QueueHead )
         {
-            Adc_RuntimeHwUnits[HwUnitId].QueueGroup[index] = 0;
+            Adc_RuntimeHwUnits[HwUnitId].QueueGroup[index] = ADC_INVALID_GROUP_ID;
             Adc_RuntimeHwUnits[HwUnitId].QueueHead = (++index == Adc_RuntimeHwUnits[HwUnitId].QueueMaxSize) ? 0 : index;
             Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = Adc_RuntimeHwUnits[HwUnitId].QueueGroup[index] ;
         }
         else if(index ==  Adc_RuntimeHwUnits[HwUnitId].QueueTail)
         {
-            Adc_RuntimeHwUnits[HwUnitId].QueueGroup[index] = 0;
+            Adc_RuntimeHwUnits[HwUnitId].QueueGroup[index] = ADC_INVALID_GROUP_ID;
             Adc_RuntimeHwUnits[HwUnitId].QueueTail = (--index == 0) ? Adc_RuntimeHwUnits[HwUnitId].QueueMaxSize - 1 : index;
         }
         // 0 h 0 x t 0 0 0
@@ -1032,10 +1016,9 @@ Std_ReturnType AdcHw_RemoveGroupFromQueue(Adc_HwUnitType HwUnitId, Adc_GroupType
                     Adc_RuntimeHwUnits[HwUnitId].QueueGroup[i] = Adc_RuntimeHwUnits[HwUnitId].QueueGroup[i + 1];
                 }
                 Adc_RuntimeHwUnits[HwUnitId].QueueGroup[Adc_RuntimeHwUnits[HwUnitId].QueueMaxSize - 1] = Adc_RuntimeHwUnits[HwUnitId].QueueGroup[0];
-                index = 0;
+                
             }
-
-            for (; index < Adc_RuntimeHwUnits[HwUnitId].QueueTail - 1; index++)
+            for (index = 0; index < Adc_RuntimeHwUnits[HwUnitId].QueueTail - 1; index++)
             {
                 Adc_RuntimeHwUnits[HwUnitId].QueueGroup[index] = Adc_RuntimeHwUnits[HwUnitId].QueueGroup[index + 1 ];
             }
@@ -1057,7 +1040,14 @@ Adc_GroupType AdcHw_GetNextGroupFromQueue(Adc_HwUnitType HwUnitId)
     Adc_GroupType ret = ADC_INVALID_GROUP_ID;
     if(Adc_RuntimeHwUnits[HwUnitId].QueueCount > 1) 
     {
+        // Get the current group index
         Adc_GroupType id = Adc_RuntimeHwUnits[HwUnitId].QueueHead;
+
+        // This is fix to remove using AdcHw_RemoveGroupFromQueue in interrupt handler
+        // Clear the current group registered before go to next group
+        Adc_RuntimeHwUnits[HwUnitId].QueueGroup[id] = ADC_INVALID_GROUP_ID;
+
+        // Check if head is at the end of the queue
         if(++id == Adc_RuntimeHwUnits[HwUnitId].QueueMaxSize - 1)
             ret =  Adc_RuntimeHwUnits[HwUnitId].QueueGroup[0];
         else 
@@ -1110,6 +1100,7 @@ Std_ReturnType AdcHw_ClearQueue(Adc_HwUnitType HwUnitId)
 /****************************************************************************************
 *                                 DEFERRED PROCESSING FUNCTIONS                       *
 ****************************************************************************************/
+// TODO : FOCUS Remove this function
 #if (ADC_ENABLE_QUEUING == STD_ON)
 /**
  * @brief Main function for deferred processing
@@ -1154,7 +1145,7 @@ void AdcHw_ProcessCompletedConversions(Adc_HwUnitType HwUnitId)
         return;
     }
     Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
-    if(AdcHw_IsUnitBusy(HwUnitId) == HW_STATE_HW)
+    if(AdcHw_GetHwUnitState(HwUnitId) == HW_STATE_HW)
     {
         AdcHw_RecallSwConversion(HwUnitId);
     }
@@ -1170,48 +1161,7 @@ void AdcHw_ProcessCompletedConversions(Adc_HwUnitType HwUnitId)
     
 }
 #endif
-/**
- * @brief Handle group completion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return void
- */
-// TODO SEEM TO NOT USED
-void AdcHw_HandleGroupCompletion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
-{
-    /* Get group configuration */
-    Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[GroupId];
-    
-    /* Update group status */
-    if (GroupConfig->Adc_GroupAccessMode == ADC_ACCESS_MODE_STREAMING)
-    {
-        AdcHw_SetGroupStatus(GroupId, ADC_STREAM_COMPLETED);
-    }
-    else
-    {
-        AdcHw_SetGroupStatus(GroupId, ADC_COMPLETED);
-    }
-    
-    /* Call notification if enabled */
-    AdcHw_CallNotification(GroupId);
-    
-    /* Handle continuous conversion */
-    if (GroupConfig->Adc_GroupConvMode == ADC_CONV_MODE_CONTINUOUS)
-    {
-        if (GroupConfig->Adc_StreamBufferMode == ADC_STREAM_BUFFER_CIRCULAR)
-        {
-            /* Restart from beginning of buffer */
-            AdcHw_HandleBufferWrapping(HwUnitId, GroupId);
-        }
-    }
-    else
-    {
-        /* One-shot conversion completed */
-        // need to reconfig this 
-        Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
-        Adc_RuntimeHwUnits[HwUnitId].HwUnitBusy = FALSE;
-    }
-}
+
 
 /****************************************************************************************
 *                                 VALIDATION FUNCTIONS                                *
@@ -1226,15 +1176,6 @@ boolean AdcHw_ValidateHwUnit(Adc_HwUnitType HwUnitId)
     return ADC_HW_IS_VALID_UNIT(HwUnitId);
 }
 
-/**
- * @brief Validate group ID
- * @param[in] GroupId ADC group ID
- * @return TRUE if valid, FALSE if invalid
- */
-boolean AdcHw_ValidateGroup(Adc_GroupType GroupId)
-{
-    return ADC_HW_IS_VALID_GROUP(GroupId);
-}
 
 /**
  * @brief Validate channel ID
@@ -1533,40 +1474,54 @@ static void AdcHw_HandleChannelSequencing(Adc_HwUnitType HwUnitId, Adc_GroupType
 {
     /* Get group configuration */
     Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[GroupId];
-    
-    /* Update buffer index */
-    Adc_RuntimeGroups[GroupId].BufferIndex++;
+
     
     /* Check if more channels in current sample */
     if (Adc_RuntimeGroups[GroupId].CurrentChannelId < (GroupConfig->Adc_NbrOfChannel - 1))
     {
         /* More channels to convert */
         Adc_RuntimeGroups[GroupId].CurrentChannelId++;
+        
+        /* Update buffer index */
+        Adc_RuntimeGroups[GroupId].BufferIndex++;
         AdcHw_StartNextConversion(HwUnitId, GroupId);
     }
+    /* Finish 1 sample*/
     else
     {
+
         AdcHw_CallNotification(GroupId);
+       
         /* All channels done for this sample */
-        Adc_RuntimeGroups[GroupId].CurrentChannelId = 0;
         Adc_RuntimeGroups[GroupId].SampleCounter++;
         /* Check if more samples needed */
+        // Finish streaming last sample
         if (Adc_RuntimeGroups[GroupId].SampleCounter >= GroupConfig->Adc_StreamNumSamples)
         {
 
             AdcHw_SetGroupStatus(GroupId, ADC_STREAM_COMPLETED);
             // If stream circular restart the conversion from beginning
             // If continuous mode restart 
-            if( (GroupConfig->Adc_GroupConvMode == ADC_CONV_MODE_CONTINUOUS )||
-                (GroupConfig->Adc_GroupAccessMode == ADC_ACCESS_MODE_STREAMING && 
-                GroupConfig->Adc_StreamBufferMode == ADC_STREAM_BUFFER_CIRCULAR))
+            if(GroupConfig->Adc_GroupConvMode == ADC_CONV_MODE_CONTINUOUS )
             {
                 /* Handle circular buffer wrapping */
-                
-                AdcHw_HandleBufferWrapping(HwUnitId, GroupId);
-            }             
+                /* Reset buffer index and sample counter */
+                Adc_RuntimeGroups[GroupId].BufferIndex = 0;
+                Adc_RuntimeGroups[GroupId].SampleCounter = 0;
+                Adc_RuntimeGroups[GroupId].CurrentChannelId = 0;
+
+                /* Continue conversion */
+                AdcHw_StartNextConversion(HwUnitId, GroupId);
+            }          
+            // other go to next state   
             else
             {
+                ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
+                AdcHw_DisableInterrupt(HwUnitId, ADC_INTERRUPT_EOC);
+                /* Disable ADC */
+                ADC_SoftwareStartConvCmd(ADCx, DISABLE);
+                ADC_Cmd(ADCx, DISABLE);
+               
                 #if (ADC_ENABLE_QUEUING == STD_ON)
                     /* All samples completed */
                     /* Tell the adc main function to do next task */
@@ -1585,12 +1540,15 @@ static void AdcHw_HandleChannelSequencing(Adc_HwUnitType HwUnitId, Adc_GroupType
             // Still have sample need to do
             /* Start next sample */
             /* Set status to completed after one conversion done*/
-
-            // GroupConfig->Adc_Status = ADC_STREAM_COMPLETED;
-            // Adc_RuntimeGroups[CurrentGroup].Status = ADC_STREAM_COMPLETED;
-            // Adc_RuntimeGroups[GroupId].Status = ADC_COMPLETED;
+            if(Adc_RuntimeGroups[GroupId].Status == ADC_BUSY)
+            {
+                AdcHw_SetGroupStatus(GroupId, ADC_COMPLETED);
+            }
+            Adc_RuntimeGroups[GroupId].BufferIndex++;
+            Adc_RuntimeGroups[GroupId].CurrentChannelId = (++Adc_RuntimeGroups[GroupId].CurrentChannelId == GroupConfig->Adc_NbrOfChannel) ? 0 : Adc_RuntimeGroups[GroupId].CurrentChannelId;
             AdcHw_StartNextConversion(HwUnitId, GroupId);
         }
+        
     }
 }
 
@@ -1617,6 +1575,7 @@ static void AdcHw_StartNextConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
     ADC_SoftwareStartConvCmd(ADCx, ENABLE);
 }
 
+// TODO Remove
 /**
  * @brief Handle buffer wrapping
  * @param[in] HwUnitId ADC hardware unit ID
@@ -1624,6 +1583,7 @@ static void AdcHw_StartNextConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
  * @note : For interrupt handler only
  * @return void
  */
+// TODO This may be not need due to all group only go to next when using read group
 static inline void AdcHw_HandleBufferWrapping(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
 {
     /* Reset buffer index and sample counter */

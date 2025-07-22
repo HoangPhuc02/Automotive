@@ -180,6 +180,38 @@ Code Configuration:
 - Enumerations and structures
 - Error codes
 
+## Sequence Explanation
+
+ [SWS_Adc_00380] The ADC module shall support the conversion mode "One
+shot Conversion" for all ADC Channel groups. One-shot conversion means that
+ exactly one conversion is executed for each channel configured for the group
+ being converted. ()
+ [SWS_Adc_00381] The ADC module shall support the conversion mode "Con
+tinuous Conversion[1]" for all ADC Channel groups with trigger source soft
+ware."Continuous Conversion" means that after the conversion has been com
+pleted, the conversion of the whole group is repeated. The conversions of the
+ individual ADC channels within the group as well as the repetition of the whole
+ group don’t need any additional trigger events to be executed. Converting the
+ individual channels within the group can be done sequentially or in parallel de
+pending on hardware and/or software capabilities. ()
+
+Có nghĩa là khi là sử dụng ở chế độ continuous nó sẽ tự động chuyển sang tiếp theo mà không cần đợi bất kì software hay hardware trigger nào cả và tự động chiếm dụng toàn bộ adc không nhả ra
+
+Đánh đổi
+Khi dùng dma hay it
+Nếu như dùng dma sẽ không có thông báo adc_completed bởi vì không thể truy xuất đ
+
+Giải pháp dùng ngắt eoc kèm dma
+Kết quả dma sẽ đọc dữ liêu từ dr trước khi vào được ngắt eoc
+
+- Ngắt EOC không dùng dma
+Trả về đủ kết quả adc_completed và adc_stream_completed
+
+Đánh đổi vô số ngắt được tạo ra có thể gây quá tải cpu
+
+
+BUG 
+Lưu ý chỉ có linear streaming thì mới chuyển state về idle khi read group
 ## 📚 API Reference
 
 ### **Initialization Functions**
@@ -221,9 +253,11 @@ Adc_StartGroupConversion(ADC_GROUP_SENSORS);
 #### **Adc_StopGroupConversion()**
 ```c
 void Adc_StopGroupConversion(Adc_GroupType Group);
-
-// Description: Stops ongoing conversion for specified group
 ```
+Description: Stops ongoing conversion for specified group
+Stop when one shot and sw trigger
+If queue is enabled remove from a list and keep going with other conversion
+If queue is not enabled turn off the hw
 
 #### **Adc_GetGroupStatus()**
 ```c
@@ -251,6 +285,31 @@ Std_ReturnType Adc_ReadGroup(Adc_GroupType Group, Adc_ValueGroupType* DataBuffer
 //   E_OK: Results successfully read
 //   E_NOT_OK: No results available or error
 ```
+[SWS_Adc_00329] Calling function Adc_ReadGroup while group status is ADC_
+ STREAM_COMPLETED shall trigger a state transition to ADC_BUSY for continuous
+ conversion modes (single access mode or circular streaming buffer mode) and hard
+ware triggered groups in single access mode or circular streaming access mode.
+ (SRS_Adc_12291)
+ [SWS_Adc_00330] Calling function Adc_ReadGroup while group status is ADC_
+ STREAM_COMPLETED shall trigger a state transition to ADC_IDLE for software trig
+gered conversion modes which automatically stop the conversion (streaming buffer
+ with linear access mode or one-shot conversion mode with single access) and for
+ the hardware triggered conversion mode in combination with linear streaming access
+ mode. (SRS_Adc_12291)
+
+  [SWS_Adc_00140] The ADCmoduleshall guarantee the consistency of the returned
+ result value for each completed conversion. (SRS_Adc_12280)
+ Note:
+ The consistency of the group channel results can be obtained with the following meth
+ods on the application side:
+ Using group notification mechanism
+ Polling via API function Adc_GetGroupStatus
+ In any case, new result data must be read out from the result buffer (e.g. via Adc_Read
+ Group) before they are overwritten. If the function Adc_GetGroupStatus reports state
+ ADC_STREAM_COMPLETED and conversions for the same group are still ongoing
+ (continuous conversion or hardware triggered conversion), the user is responsible to
+ access the results in the result buffer, before the ADC driver overwrites the group result
+ buffer.
 
 ### **Streaming Functions**
 
@@ -279,6 +338,171 @@ void Adc_GetVersionInfo(Std_VersionInfoType* VersionInfo);
 
 // Description: Returns version information of ADC driver
 ```
+
+## QUEUE EXPLANATION
+
+ [SWS_Adc_00335] If the queuing mechanism is active (priority mechanism active
+ or queuing explicitly activated), the ADC module shall store each software conversion
+ request per channel group at most one time in the software queue. ()
+ Note: The ADC module shall only store one conversion request per channel group, not
+ multiple requests, which may occur if a high priority long-term conversion blocks the
+ hardware.
+### HOW QUEUE WORK
+
+### DMA QUEUE
+
+
+### IT QUEUE
+
+
+### Queue Management
+
+#### **Queue Removal Function**
+
+```c
+Std_ReturnType AdcHw_RemoveGroupFromQueue(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+```
+
+This function removes a specified group from the ADC conversion queue. The queue follows a circular buffer implementation where:
+- `head` points to the currently converting group
+- `tail` points to the last group in the queue
+- Queue operations must handle both linear and wrap-around scenarios
+
+##### **Removal Logic:**
+
+1. **When removing the current converting group (head):**
+    - Mark the head position with `ADC_INVALID_GROUP_ID`
+    - Update `CurrentGroupId` to the next group in queue
+    - The invalid entry will be removed on next queue update
+
+2. **When removing a group that is not currently converting:**
+    
+    a. **If it's the last group in queue (tail position):**
+        - Update tail pointer to its nearest valid group
+    
+    b. **If it's in the middle of the queue:**
+        - Shift subsequent groups to fill the gap based on queue position
+
+##### **Circular Queue Handling Cases:**
+
+```
+Case 1: Normal queue (head before tail)
+[0][1][2][3][4][5][6][7]
+    H     X     T
+     
+Case 2: Wrapped queue (tail before head)
+[0][1][2][3][4][5][6][7]
+          T     H     X
+
+Case 3: Wrapped queue with removal between tail and end
+[0][1][2][3][4][5][6][7]
+     X     T     H
+```
+
+The removal operation handles these cases by:
+- Identifying the queue structure (wrapped or linear)
+- Determining the position of the group to remove relative to head/tail
+- Performing appropriate shifting operations to maintain queue integrity
+- Updating tail pointer when necessary to reflect the new queue size
+
+#### **Adding Group to Queue**
+
+```c
+Std_ReturnType AdcHw_AddGroupToQueue(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+```
+
+This function adds a new group to the ADC conversion queue:
+- Verifies queue isn't full before adding
+- Verifies group has been registered 
+- Places new group at the tail position
+- Updates tail pointer accordingly
+- Handles queue wrap-around when tail reaches buffer end
+- Returns status indicating success or failure (queue full)
+
+This function manages the addition of ADC groups to the conversion queue:
+
+- **Purpose**: Schedules a new ADC group for sequential conversion
+- **Queue Structure**: Maintains a circular buffer implementation where:
+    - Each entry represents an ADC group waiting for conversion
+    - The queue has head (currently converting) and tail (last in line) pointers
+    - Groups are processed in FIFO (First-In-First-Out) order
+
+- **Operation Steps**:
+    1. Validates the group is properly configured and registered
+    2. Checks if queue has available space
+    3. Places the new group at the tail position
+    4. Updates the tail pointer to reflect the new queue state
+    5. Handles circular buffer wrap-around when tail reaches the end
+
+- **Return Values**:
+    - `E_OK`: Group successfully added to queue
+    - `E_NOT_OK`: Queue is full or group invalid
+
+- **Queue State Management**:
+    - If queue was empty, the added group becomes both head and tail
+    - If queue had entries, group is added after current tail
+    - Maintains queue integrity for proper sequential processing
+
+This function works in conjunction with group removal and "get next group" functions to provide complete queue management for ADC conversion sequencing.
+
+#### **Get Next Group in Queue**
+
+```c
+Adc_GroupType AdcHw_GetNextGroupFromQueue(Adc_HwUnitType HwUnitId)
+```
+
+This function retrieves the next ADC group from the conversion queue for processing:
+
+- **Purpose**: Determines which group should be converted next after the current group completes
+- **Queue Navigation**: Advances the queue head position to the next valid group
+- **Algorithm**:
+    1. Checks if the queue contains more than one group
+    2. Identifies the next valid group entry after the current head position
+    3. Handles queue wrap-around when head reaches the end of the buffer
+    4. Marks the current head entry with `ADC_INVALID_GROUP_ID` to indicate it's been processed
+    5. Updates the head pointer to point to the next group
+
+- **Return Value**: 
+    - Returns the group ID of the next group to be converted
+    - Returns `ADC_INVALID_GROUP_ID` if no next group exists in the queue
+
+- **Queue State Management**:
+    - Maintains queue integrity by properly updating head position
+    - Preserves other queued groups for subsequent conversions
+    - Ensures continuous processing in streaming mode
+
+This function works in conjunction with queue addition and removal functions to provide complete queue management for ADC group conversions.
+
+#### **Check Group in Queue**
+```c
+Adc_GroupType AdcHw_IsGroupInQueue(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId)
+```
+- **Purpose**
+This function searches through a circular queue to determine if a specified ADC group ID is present in the queue.
+
+- **Parameters**
+    - HwUnitId: The identifier for the ADC hardware unit to check
+    - GroupId: The specific ADC group ID to search for in the queue
+
+
+- **Return Value**
+    - If the group is found: Returns the index position of the group in the queue
+    - If the group is not found: Returns ADC_INVALID_GROUP_ID
+- **Algorithm**
+    - The function handles two different queue scenarios:
+
+    - Wrapped Queue (when QueueHead > QueueTail):
+
+    - The queue has wrapped around the array boundaries
+    - First searches from QueueHead to the end of the queue (QueueMaxSize-1)
+    - Then searches from the beginning of the array (0) to QueueTail
+    - Linear Queue (when QueueHead <= QueueTail):
+
+    - The queue is in a continuous segment of the array
+    - Searches linearly from QueueHead to QueueTail
+- **Usage**
+    - This function can be used to check if a group conversion request is already queued before adding it to avoid duplication, or to find the position of a group in the queue for manipulation purposes.
+
 
 ## 🔄 Function Flow
 

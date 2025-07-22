@@ -29,7 +29,7 @@
 /* AUTOSAR specification version information */
 #define ADC_VENDOR_ID           0x0001  /* Vendor ID for ADC driver */ 
 #define ADC_MODULE_ID           0x0037  /* Module ID for ADC driver (37 per AUTOSAR) */
-#define ADC_SW_MAJOR_VERSION    1
+#define ADC_SW_MAJOR_VERSION    3
 #define ADC_SW_MINOR_VERSION    0
 #define ADC_SW_PATCH_VERSION    0 
 #define ADC_AR_RELEASE_MAJOR_VERSION    4

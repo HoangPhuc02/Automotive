@@ -14,6 +14,7 @@
 *                                 INCLUDE FILES                                        *
 ****************************************************************************************/
 #include "Adc.h"
+#include "Det.h"
 #include "Adc_Cfg.h"
 #include "Adc_Hw.h"
 #include "Adc_Types.h"
@@ -55,13 +56,17 @@ Adc_PerformanceCountersType Adc_PerformanceCounters;
 /****************************************************************************************
 *                                 STATIC FUNCTION PROTOTYPES                          *
 ****************************************************************************************/
+#if(ADC_DEV_ERROR_DETECT == STD_ON)
 static Std_ReturnType Adc_ValidateInit(uint8 ApiId);
 static Std_ReturnType Adc_ValidateGroup(Adc_GroupType Group, uint8 ApiId);
 static Std_ReturnType Adc_ValidatePointer(const void* Ptr, uint8 ApiId);
-static void Adc_InitializeRuntimeData(void);
-static void Adc_ResetRuntimeData(void);
 static Std_ReturnType Adc_ValidateGroupForStart(Adc_GroupType Group);
 static Std_ReturnType Adc_ValidateGroupForStop(Adc_GroupType Group);
+#endif
+static void Adc_InitializeRuntimeData(void);
+static void Adc_ResetRuntimeData(void);
+
+
 static void Adc_HandleGroupCompletion(Adc_GroupType Group);
 static void Adc_UpdateGroupStatus(Adc_GroupType Group, Adc_StatusType NewStatus);
 
@@ -76,23 +81,20 @@ static void Adc_UpdateGroupStatus(Adc_GroupType Group, Adc_StatusType NewStatus)
  */
 void Adc_Init(const Adc_ConfigType* ConfigPtr)
 {
+#if(ADC_DEV_ERROR_DETECT == STD_ON)
     /* Development error detection */
     if (Adc_DriverState != ADC_DRIVER_STATE_UNINIT)
     {
-        #if (ADC_DEV_ERROR_DETECT == STD_ON)
         Det_ReportError(ADC_MODULE_ID, 0, ADC_INIT_ID, ADC_E_ALREADY_INITIALIZED);
-        #endif
         return;
     }
     
     if (ConfigPtr == NULL_PTR)
     {
-        #if (ADC_DEV_ERROR_DETECT == STD_ON)
         Det_ReportError(ADC_MODULE_ID, 0, ADC_INIT_ID, ADC_E_PARAM_CONFIG);
-        #endif
         return;
     }
-    
+#endif
     /* Store configuration pointer */
     Adc_ConfigPtr = ConfigPtr;
     
@@ -100,19 +102,21 @@ void Adc_Init(const Adc_ConfigType* ConfigPtr)
     Adc_InitializeRuntimeData();
     
     /* Initialize hardware units */
-    for (uint8 i = 0; i < ConfigPtr->NumHwUnits; i++)
+    for (Adc_HwUnitType i = 0; i < ConfigPtr->NumHwUnits; i++)
     {
+        /* Initialize hardware unit */
         if (AdcHw_Init(i) != E_OK)
         {
-            #if (ADC_DEV_ERROR_DETECT == STD_ON)
-            Det_ReportError(ADC_MODULE_ID, 0, ADC_INIT_ID, ADC_E_HW_FAILURE);
-            #endif
             /* Reset driver state on failure */
             Adc_DriverState = ADC_DRIVER_STATE_UNINIT;
             return;
         }
     }
-    
+    for (Adc_GroupType i = 0; i < ConfigPtr->NumGroups; i++)
+    {
+        Adc_DisableGroupNotification(i);
+    }
+
     /* Initialize performance counters */
     #if (ADC_ENABLE_DEBUG_SUPPORT == STD_ON)
     memset(&Adc_PerformanceCounters, 0, sizeof(Adc_PerformanceCountersType));
@@ -242,9 +246,9 @@ void Adc_StartGroupConversion(Adc_GroupType Group)
     /* Software triggered conversion */
     if (AdcHw_StartSwConversion(HwUnit, Group) == E_OK)
     {
-        Adc_UpdateGroupStatus(Group, ADC_BUSY);
+        // do something
     }
-    
+
 }
 
 /**
@@ -610,22 +614,6 @@ void Adc_MainFunction(void)
     AdcHw_MainFunction();
 }
 
-// /**
-//  * @brief   Fast interrupt handler with minimal processing
-//  * @param[in] HwUnit ADC hardware unit that triggered the interrupt
-//  * @return  void
-//  */
-// void Adc_InterruptHandler(Adc_HwUnitType HwUnit)
-// {
-//     /* Call hardware-specific interrupt handler */
-//     AdcHw_InterruptHandler(HwUnit);
-// }
-
-// void Adc_DMAInterruptHandler(Adc_HwUnitType HwUnit)
-// {
-//     /* Call DMA interrupt handler */
-//     AdcHw_DmaInterruptHandler(HwUnit);
-// }
 
 /****************************************************************************************
 *                                 STATIC HELPER FUNCTIONS                             *
@@ -655,7 +643,7 @@ static inline Std_ReturnType Adc_ValidateInit(uint8 ApiId)
  */
 static inline Std_ReturnType Adc_ValidateGroup(Adc_GroupType Group, uint8 ApiId)
 {
-    if (!AdcHw_ValidateGroup(Group))
+    if (ADC_HW_IS_VALID_GROUP(Group) == FALSE)
     {
         #if (ADC_DEV_ERROR_DETECT == STD_ON)
         Det_ReportError(ADC_MODULE_ID, 0, ApiId, ADC_E_PARAM_INVALID_GROUP);

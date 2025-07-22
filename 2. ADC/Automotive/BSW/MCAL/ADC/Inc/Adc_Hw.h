@@ -80,14 +80,9 @@
 /****************************************************************************************
 *                              EXTERNAL DECLARATIONS                                   *
 ****************************************************************************************/
-/* Runtime data arrays */
-// Update to private
-// extern Adc_RuntimeGroupType Adc_RuntimeGroups[ADC_MAX_GROUPS];
-// extern Adc_RuntimeHwUnitType Adc_RuntimeHwUnits[ADC_MAX_HW_UNITS];
-
 /* Configuration arrays */
-extern Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS];
-extern Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS];
+extern Adc_GroupDefType     Adc_GroupConfig[ADC_MAX_GROUPS];
+extern Adc_HwUnitDefType    Adc_HwUnitConfig[ADC_MAX_HW_UNITS];
 
 
 /****************************************************************************************
@@ -233,7 +228,7 @@ Std_ReturnType AdcHw_ResetHwRuntime(Adc_HwUnitType HwUnitId);
  * @param[in] HwUnitId ADC hardware unit ID
  * @return TRUE if busy, FALSE if idle
  */
-HwUnitState AdcHw_IsUnitBusy(Adc_HwUnitType HwUnitId);
+Adc_HwUnitStateType AdcHw_GetHwUnitState(Adc_HwUnitType HwUnitId);
 
 /**
  * @brief Get current converting channel

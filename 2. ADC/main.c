@@ -24,13 +24,18 @@
 uint16 buffer[200];
 extern const Port_ConfigType PortCfg_Port; 
 extern const Adc_ConfigType Adc_Config;
+uint32 notify = 0;
 void Adc_Group1_Notification(void)
 {
-    Adc_ReadGroup(Adc_Config.Groups[0].Adc_GroupId, &buffer[0]);
+    // Adc_ReadGroup(Adc_Config.Groups[0].Adc_GroupId, &buffer[0]);
+    
+    notify++;
+    // Adc_DisableGroupNotification(Adc_Config.Groups[0].Adc_GroupId);
+    // Adc_StopGroupConversion(Adc_Config.Groups[0].Adc_GroupId);
 }
 void Adc_Group2_Notification(void)
 {
-    Adc_ReadGroup(Adc_Config.Groups[1].Adc_GroupId, &buffer[10]);
+    // Adc_ReadGroup(Adc_Config.Groups[1].Adc_GroupId, &buffer[10]);
 }
 void Adc_Group3_Notification(void)
 {
@@ -75,8 +80,11 @@ int main()
     Adc_Init(&Adc_Config);
     Adc_SetupResultBuffer(Adc_Config.Groups[0].Adc_GroupId, Adc_Config.Groups[0].Adc_ValueResultPtr);
     Adc_SetupResultBuffer(Adc_Config.Groups[1].Adc_GroupId, Adc_Config.Groups[1].Adc_ValueResultPtr);
+    Adc_EnableGroupNotification(Adc_Config.Groups[0].Adc_GroupId);
     Adc_StartGroupConversion(Adc_Config.Groups[0].Adc_GroupId);
-    Adc_StartGroupConversion(Adc_Config.Groups[1].Adc_GroupId);
+    
+
+    // Adc_StartGroupConversion(Adc_Config.Groups[1].Adc_GroupId);
     // Adc_StartGroupConversion(Adc_Config.Groups[2].Adc_GroupId);
     Adc_GroupType i = 0;
     while (1)
