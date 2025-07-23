@@ -4,8 +4,9 @@
 * File Name   : Adc_Hw.h
 * Module      : Analog to Digital Converter (ADC) - Hardware Layer
 * Description : AUTOSAR ADC driver hardware abstraction layer header file 
-* Version     : 2.0.0 - Redesigned for clarity and maintainability
-* Date        : 24/06/2025
+* Version     : 3.1.0 - Redesigned for clarity and maintainability
+* Date        : 23/07/2025
+* Update      : 23/07/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
 ****************************************************************************************/
@@ -21,23 +22,32 @@
 #include "Adc_Types.h"
 #include "Adc_Cfg.h"
 
-/* STM32 hardware includes */
-// #include "stm32f10x_adc.h"
-// #include "stm32f10x_dma.h"
-// #include "misc.h"
 
-/****************************************************************************************
-*                              VERSION INFORMATION                                     *
-****************************************************************************************/
-#define ADC_HW_SW_MAJOR_VERSION     2
-#define ADC_HW_SW_MINOR_VERSION     0
-#define ADC_HW_SW_PATCH_VERSION     0
+
 
 /****************************************************************************************
 *                              HARDWARE VALIDATION MACROS                             *
 ****************************************************************************************/
+
+/**
+ * @brief Validate ADC hardware unit ID
+ * @param id Hardware unit identifier (0-based indexing)
+ * @return TRUE if valid, FALSE otherwise
+ */
 #define ADC_HW_IS_VALID_UNIT(id)    (((id) >= 0) && ((id) < ADC_MAX_HW_UNITS))
+
+/**
+ * @brief Validate ADC group ID
+ * @param id Group identifier (0-based indexing)
+ * @return TRUE if valid, FALSE otherwise
+ */
 #define ADC_HW_IS_VALID_GROUP(id)   (((id) >= 0) && ((id) < ADC_MAX_GROUPS))
+
+/**
+ * @brief Validate ADC channel ID
+ * @param id Channel identifier (0-based indexing)
+ * @return TRUE if valid, FALSE otherwise
+ */
 #define ADC_HW_IS_VALID_CHANNEL(id) (((id) >= 0) && ((id) < ADC_MAX_CHANNELS))
 
 /****************************************************************************************
@@ -45,35 +55,48 @@
 ****************************************************************************************/
 
 /**
- * @brief Get DMA interrupt flag for ADC unit
+ * @brief Get DMA interrupt flag for specified ADC unit
+ * @param id ADC hardware unit ID (1 for ADC1, 2 for ADC2)
+ * @return DMA interrupt flag or 0 if invalid unit
  */
 #define ADC_HW_GET_DMA_IT_FLAG(id)  ((id == 1) ? DMA1_IT_TC1 : 0)
 
 /**
- * @brief Get ADC interrupt flag
+ * @brief Get ADC interrupt flag for specified unit
+ * @param id ADC hardware unit ID (1 for ADC1, 2 for ADC2)
+ * @return ADC interrupt flag or 0 if invalid unit
  */
 #define ADC_HW_GET_ADC_IT_FLAG(id)  ((id == 1) ? ADC_IT_EOC : 0)
 
 /****************************************************************************************
 *                              HARDWARE STATUS MACROS                                 *
 ****************************************************************************************/
+
 /**
- * @brief Check if ADC is enabled
+ * @brief Check if ADC module is enabled
+ * @param ADCx Pointer to ADC peripheral (ADC1, ADC2, etc.)
+ * @return Non-zero if enabled, 0 if disabled
  */
 #define ADC_HW_IS_ENABLED(ADCx)     ((ADCx->CR2 & ADC_CR2_ADON) != 0)
 
 /**
- * @brief Check if ADC conversion is ongoing
+ * @brief Check if ADC conversion is currently in progress
+ * @param ADCx Pointer to ADC peripheral (ADC1, ADC2, etc.)
+ * @return Non-zero if converting, 0 if idle
  */
 #define ADC_HW_IS_CONVERTING(ADCx)  ((ADCx->SR & ADC_SR_STRT) != 0)
 
 /**
- * @brief Check if DMA is enabled for ADC
+ * @brief Check if DMA is enabled for the ADC
+ * @param ADCx Pointer to ADC peripheral (ADC1, ADC2, etc.)
+ * @return Non-zero if DMA enabled, 0 if disabled
  */
 #define ADC_HW_IS_DMA_ENABLED(ADCx) ((ADCx->CR2 & ADC_CR2_DMA) != 0)
 
 /**
  * @brief Check if end-of-conversion flag is set
+ * @param ADCx Pointer to ADC peripheral (ADC1, ADC2, etc.)
+ * @return Non-zero if EOC flag set, 0 if not set
  */
 #define ADC_HW_IS_EOC_SET(ADCx)     ((ADCx->SR & ADC_SR_EOC) != 0)
 
@@ -102,205 +125,178 @@ Std_ReturnType AdcHw_Init(Adc_HwUnitType HwUnitId);
  */
 Std_ReturnType AdcHw_DeInit(Adc_HwUnitType HwUnitId);
 
-/**
- * @brief Configure ADC hardware module for a specific group
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_ConfigureGroup(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
-
 /****************************************************************************************
 *                              CONVERSION CONTROL FUNCTIONS                           *
 ****************************************************************************************/
+
 /**
- * @brief Start software-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
+ * @brief Start software-triggered ADC conversion
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID to start conversion
  * @return E_OK if successful, E_NOT_OK otherwise
+ * @note This function initiates software-triggered conversion for the specified group
+ *       If queuing is enabled, the group will be added to the conversion queue
  */
 Std_ReturnType AdcHw_StartSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 /**
- * @brief Stop software-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
+ * @brief Stop software-triggered ADC conversion
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID to stop conversion
  * @return E_OK if successful, E_NOT_OK otherwise
+ * @note This function stops ongoing conversion and may start next group from queue if enabled
  */
 Std_ReturnType AdcHw_StopSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 /**
- * @brief Start hardware-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
+ * @brief Start hardware-triggered ADC conversion
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID to start conversion
  * @return E_OK if successful, E_NOT_OK otherwise
+ * @note This function configures external trigger for hardware-triggered conversion
  */
 Std_ReturnType AdcHw_StartHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 /**
- * @brief Stop hardware-triggered conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
+ * @brief Stop hardware-triggered ADC conversion
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID to stop conversion
  * @return E_OK if successful, E_NOT_OK otherwise
+ * @note This function disables external trigger and may recall software conversions
  */
 Std_ReturnType AdcHw_StopHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 /**
- * @note : call when finish hw conversion or hw conversion is stop by ADC_HWSTOPConversion
+ * @brief Recall next software conversion from queue
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note Called after hardware conversion completion to process pending software requests
+ *       Only used when ADC_ENABLE_QUEUING is enabled
  */
 Std_ReturnType AdcHw_RecallSwConversion(Adc_HwUnitType HwUnitId);
 /****************************************************************************************
-*                              CHANNEL CONFIGURATION FUNCTIONS                        *
+*                              HW CONFIGURATION FUNCTIONS                               *
 ****************************************************************************************/
 /**
- * @brief Configure ADC channels for a group
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
+ * @brief Configure ADC hardware module for a specific group
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID to configure
  * @return E_OK if successful, E_NOT_OK otherwise
  */
-Std_ReturnType AdcHw_ConfigureChannels(ADC_TypeDef* ADCx, Adc_HwUnitDefType* HwUnitConfig, Adc_GroupDefType* GroupConfig);
+Std_ReturnType AdcHw_ConfigureGroup(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
+/**
+ * @brief Configure ADC channels for a specific group
+ * @param[in] ADCx Pointer to ADC peripheral (ADC1, ADC2, etc.)
+ * @param[in] HwUnitConfig Pointer to hardware unit configuration
+ * @param[in] GroupConfig Pointer to group configuration containing channel settings
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note This function configures channel rank, sampling time, and sequence for the group
+ */
+Std_ReturnType AdcHw_ConfigureChannels(ADC_TypeDef* ADCx, 
+                                       Adc_HwUnitDefType* HwUnitConfig, 
+                                       Adc_GroupDefType* GroupConfig);
+
+
+/****************************************************************************************
+*                              DMA CONFIGURATION FUNCTIONS                             *
+****************************************************************************************/
+
+/**
+ * @brief Initialize DMA for ADC conversion
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID for DMA configuration
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note Configures DMA channel, buffer, and interrupt settings for the specified group
+ *       Only available when ADC_ENABLE_DMA is STD_ON
+ */
+Std_ReturnType AdcHw_InitDma(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
+
+/**
+ * @brief Deinitialize DMA for ADC conversion
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note Disables DMA channel and clears configuration for the specified ADC unit
+ */
+Std_ReturnType AdcHw_DeInitDma(Adc_HwUnitType HwUnitId);
+
+/****************************************************************************************
+*                              INTERRUPT FUNCTIONS                                    *
+****************************************************************************************/
+
+/**
+ * @brief Enable ADC interrupts
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] InterruptType Type of interrupt to enable (see ADC_Hw_Interrupt_types)
+ *                          - ADC_INTERRUPT_EOC: End of conversion interrupt
+ *                          - ADC_INTERRUPT_DMA_TC: DMA transfer complete interrupt
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note Multiple interrupt types can be enabled using bitwise OR operation
+ */
+Std_ReturnType AdcHw_EnableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptType);
+
+/**
+ * @brief Disable ADC interrupts
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] InterruptType Type of interrupt to disable (see ADC_Hw_Interrupt_types)
+ *                          - ADC_INTERRUPT_EOC: End of conversion interrupt
+ *                          - ADC_INTERRUPT_DMA_TC: DMA transfer complete interrupt
+ * @return E_OK if successful, E_NOT_OK otherwise
+ * @note Multiple interrupt types can be disabled using bitwise OR operation
+ */
+Std_ReturnType AdcHw_DisableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptType);
 
 /****************************************************************************************
 *                              RESULT HANDLING FUNCTIONS                              *
 ****************************************************************************************/
+
 /**
- * @brief Read conversion result
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @param[out] ResultPtr Pointer to result buffer
+ * @brief Read ADC conversion result for a group
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID whose results to read
+ * @param[out] ResultPtr Pointer to buffer where results will be stored
  * @return E_OK if successful, E_NOT_OK otherwise
+ * @note Results are only available when group status is ADC_COMPLETED or ADC_STREAM_COMPLETED
  */
 Std_ReturnType AdcHw_ReadResult(Adc_HwUnitType HwUnitId, 
                                Adc_GroupType GroupId, 
                                Adc_ValueGroupType* ResultPtr);
 
 /**
- * @brief Read streaming results
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @param[out] ResultPtr Pointer to result buffer
- * @param[in] NumSamples Number of samples to read
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_ReadStreamingResults(Adc_HwUnitType HwUnitId, 
-                                         Adc_GroupType GroupId, 
-                                         Adc_ValueGroupType* ResultPtr, 
-                                         Adc_StreamNumSampleType NumSamples);
+ * @brief Read ADC conversion result for a group
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID whose results to read
+ * @return none
+ * @note This function handles the state after reading results, such as updating group status
+ *       and notifying callbacks if necessary. It is called internally after reading results.
+ */                          
+void AdcHw_HandleReadResultState(Adc_HwUnitType HwUnitId, 
+                               Adc_GroupType GroupId);
 
-/****************************************************************************************
-*                              STATUS FUNCTIONS                                       *
-****************************************************************************************/
-/**
- * @brief Set private ADC group runtime status
- * @param[in] GroupId ADC group ID
- * @return Sample Counter
- */
-Adc_StreamNumSampleType AdcHw_GetGroupRuntimeSampCounter(Adc_GroupType GroupId);
 
-/**
- * @brief Get ADC group status
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return Group status
- */
-Adc_StatusType AdcHw_GetGroupRuntimeStatus(Adc_GroupType GroupId);
-
-/**
- * @brief Reset private ADC group runtime Parameter
- * @param[in] GroupId ADC group ID
- * @return E_NOT_OK if invalid Group, E_OK if reset successfull
- */
-Std_ReturnType AdcHw_ResetGroupRuntime(Adc_GroupType GroupId);
-
-/**
- * 
- */
-void AdcHw_SetGroupStatus(Adc_GroupType GroupId, Adc_StatusType Status);
-/**
- * @brief Reset private ADC hw runtime  Parameter
- * @param[in] HwUnitId ADC hardware unit ID
- * @return E_NOT_OK if invalid HW, E_OK if reset successfull
- */
-Std_ReturnType AdcHw_ResetHwRuntime(Adc_HwUnitType HwUnitId);
-/**
- * @brief Check if hardware unit is busy
- * @param[in] HwUnitId ADC hardware unit ID
- * @return TRUE if busy, FALSE if idle
- */
-Adc_HwUnitStateType AdcHw_GetHwUnitState(Adc_HwUnitType HwUnitId);
-
-/**
- * @brief Get current converting channel
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return Current channel ID
- */
-Adc_ChannelType AdcHw_GetCurrentChannel(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 
 /****************************************************************************************
-*                              DMA FUNCTIONS                                          *
+*                              INTERRUPT HANDLER FUNCTIONS                             *
 ****************************************************************************************/
-/**
- * @brief Initialize DMA for ADC conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_InitDma(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 /**
- * @brief Deinitialize DMA for ADC conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_DeInitDma(Adc_HwUnitType HwUnitId);
-
-/**
- * @brief Enable DMA for ADC conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_EnableDma(Adc_HwUnitType HwUnitId);
-
-/**
- * @brief Disable DMA for ADC conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_DisableDma(Adc_HwUnitType HwUnitId);
-
-/****************************************************************************************
-*                              INTERRUPT FUNCTIONS                                    *
-****************************************************************************************/
-/**
- * @brief Enable ADC interrupts
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] InterruptType Type of interrupt to enable @reg ADC_Hw_Interrupt_types ADC_HW.h
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_EnableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptType);
-
-/**
- * @brief Disable ADC interrupts
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] InterruptType Type of interrupt to disable @reg ADC_Hw_Interrupt_types ADC_HW.h
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_DisableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptType);
-
-/**
- * @brief ADC interrupt service routine
- * @param[in] HwUnitId ADC hardware unit ID
+ * @brief ADC end-of-conversion interrupt service routine
+ * @param[in] ADCx Pointer to ADC peripheral that generated the interrupt
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
  * @return void
+ * @note This function handles EOC interrupts, reads conversion data, and manages
+ *       channel sequencing for multi-channel groups
  */
 void AdcHw_InterruptHandler(ADC_TypeDef* ADCx, Adc_HwUnitType HwUnitId);
 
 /**
- * @brief DMA interrupt service routine
- * @param[in] HwUnitId ADC hardware unit ID
+ * @brief DMA transfer complete interrupt service routine
+ * @param[in] DMAx Pointer to DMA channel that generated the interrupt
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
  * @return void
+ * @note This function handles DMA TC interrupts, updates group status, and calls
+ *       notification callbacks when conversion is complete
  */
 void AdcHw_DmaInterruptHandler(DMA_Channel_TypeDef* DMAx, Adc_HwUnitType HwUnitId);
 
@@ -348,52 +344,66 @@ Std_ReturnType AdcHw_ClearQueue(Adc_HwUnitType HwUnitId);
 #endif /* ADC_ENABLE_QUEUING */
 
 /****************************************************************************************
-*                              STREAMING FUNCTIONS                                    *
+*                              STATUS FUNCTIONS                                       *
 ****************************************************************************************/
-//TODO: wil be use in ver 3.0
-#if (ADC_ENABLE_STREAMING == STD_ON)
-/**
- * @brief Configure streaming buffer
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @param[in] BufferPtr Pointer to streaming buffer
- * @param[in] BufferSize Size of streaming buffer
- * @param[in] BufferMode Buffer mode (linear/circular)
- * @return E_OK if successful, E_NOT_OK otherwise
- */
-Std_ReturnType AdcHw_ConfigureStreamingBuffer(Adc_HwUnitType HwUnitId, 
-                                             Adc_GroupType GroupId,
-                                             Adc_ValueGroupType* BufferPtr,
-                                             uint16 BufferSize,
-                                             Adc_StreamBufferModeType BufferMode);
 
 /**
- * @brief Start streaming conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
+ * @brief Get ADC group runtime sample counter
+ * @param[in] GroupId ADC group ID to query
+ * @return Current sample counter value (255 if invalid GroupId)
+ * @note Returns the number of samples completed for the specified group
  */
-Std_ReturnType AdcHw_StartStreaming(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
+Adc_StreamNumSampleType AdcHw_GetGroupRuntimeSampCounter(Adc_GroupType GroupId);
 
 /**
- * @brief Stop streaming conversion
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @return E_OK if successful, E_NOT_OK otherwise
+ * @brief Get ADC group runtime status
+ * @param[in] GroupId ADC group ID to query
+ * @return Current group status (ADC_IDLE, ADC_BUSY, ADC_COMPLETED, ADC_STREAM_COMPLETED)
+ * @note Returns ADC_IDLE if invalid GroupId is provided
  */
-Std_ReturnType AdcHw_StopStreaming(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
+Adc_StatusType AdcHw_GetGroupRuntimeStatus(Adc_GroupType GroupId);
 
 /**
- * @brief Get streaming buffer status
- * @param[in] HwUnitId ADC hardware unit ID
- * @param[in] GroupId ADC group ID
- * @param[out] FilledSamples Number of filled samples
- * @return E_OK if successful, E_NOT_OK otherwise
+ * @brief Reset ADC group runtime parameters
+ * @param[in] GroupId ADC group ID to reset
+ * @return E_OK if successful, E_NOT_OK if invalid GroupId
+ * @note Resets sample counter, channel ID, buffer index, and status to idle
  */
-Std_ReturnType AdcHw_GetStreamingStatus(Adc_HwUnitType HwUnitId, 
-                                       Adc_GroupType GroupId, 
-                                       uint16* FilledSamples);
-#endif /* ADC_ENABLE_STREAMING */
+Std_ReturnType AdcHw_ResetGroupRuntime(Adc_GroupType GroupId);
+
+/**
+ * @brief Set ADC group status
+ * @param[in] GroupId ADC group ID to update
+ * @param[in] Status New status to set (ADC_IDLE, ADC_BUSY, ADC_COMPLETED, etc.)
+ * @return void
+ * @note Updates both configuration and runtime status for the group
+ */
+void AdcHw_SetGroupStatus(Adc_GroupType GroupId, Adc_StatusType Status);
+
+/**
+ * @brief Reset ADC hardware unit runtime parameters
+ * @param[in] HwUnitId ADC hardware unit ID to reset (0 = ADC1, 1 = ADC2)
+ * @return E_OK if successful, E_NOT_OK if invalid HwUnitId
+ * @note Resets current group, state, and queue parameters if queuing is enabled
+ */
+Std_ReturnType AdcHw_ResetHwRuntime(Adc_HwUnitType HwUnitId);
+
+/**
+ * @brief Get ADC hardware unit current state
+ * @param[in] HwUnitId ADC hardware unit ID to query (0 = ADC1, 1 = ADC2)
+ * @return Current hardware unit state (HW_STATE_IDLE, HW_STATE_SW, HW_STATE_HW)
+ * @note Inline function for fast access to hardware unit state
+ */
+Adc_HwUnitStateType AdcHw_GetHwUnitState(Adc_HwUnitType HwUnitId);
+
+/**
+ * @brief Get current converting channel for a group
+ * @param[in] HwUnitId ADC hardware unit ID (0 = ADC1, 1 = ADC2)
+ * @param[in] GroupId ADC group ID to query
+ * @return Current channel ID being converted (ADC_INVALID_CHANNEL_ID if invalid parameters)
+ * @note Returns the channel currently being processed in multi-channel conversions
+ */
+Adc_ChannelType AdcHw_GetCurrentChannel(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 /****************************************************************************************
 *                              VALIDATION FUNCTIONS                                   *
@@ -469,21 +479,22 @@ void AdcHw_ProcessCompletedConversions(Adc_HwUnitType HwUnitId);
 void AdcHw_HandleGroupCompletion(Adc_HwUnitType HwUnitId, Adc_GroupType GroupId);
 
 /****************************************************************************************
-*                              CONSTANTS                                              *
+*                              CONSTANTS AND DEFINITIONS                              *
 ****************************************************************************************/
-#define ADC_INVALID_GROUP_ID        0xFFU
-#define ADC_INVALID_CHANNEL_ID      0xFFU
-#define ADC_INVALID_HW_UNIT_ID      0xFFU
 
-/* @reg ADC_Hw_Interrupt_types */
-#define ADC_INTERRUPT_EOC           (uint8)0x01U
-#define ADC_INTERRUPT_DMA_TC        (uint8)0x02U
-#define ADC_INTERRUPT_ERROR         (uint8)0x04U
+/* Invalid identifier constants */
+#define ADC_INVALID_GROUP_ID        0xFFU    /* Invalid group identifier */
+#define ADC_INVALID_CHANNEL_ID      0xFFU    /* Invalid channel identifier */
+#define ADC_INVALID_HW_UNIT_ID      0xFFU    /* Invalid hardware unit identifier */
 
-/* Hardware limits */
-#define ADC_HW_MAX_CHANNELS_PER_GROUP   16U
-#define ADC_HW_MAX_CONVERSION_TIME_US   20U
-#define ADC_HW_MAX_SAMPLING_CYCLES      239U
+/* ADC Hardware Interrupt Types - Used with Enable/Disable Interrupt functions */
+#define ADC_INTERRUPT_EOC           (uint8)0x01U    /* End of conversion interrupt */
+#define ADC_INTERRUPT_DMA_TC        (uint8)0x02U    /* DMA transfer complete interrupt */
+
+/* Hardware performance limits and constraints */
+#define ADC_HW_MAX_CHANNELS_PER_GROUP   16U     /* Maximum channels per conversion group */
+#define ADC_HW_MAX_CONVERSION_TIME_US   20U     /* Maximum conversion time in microseconds */
+#define ADC_HW_MAX_SAMPLING_CYCLES      239U    /* Maximum sampling cycles (STM32F103 limit) */
 
 #endif /* ADC_HW_H */
 

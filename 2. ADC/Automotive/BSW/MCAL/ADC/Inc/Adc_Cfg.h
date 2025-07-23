@@ -4,8 +4,9 @@
 * File Name   : Adc_Cfg.h
 * Module      : Analog to Digital Converter (ADC)
 * Description : AUTOSAR ADC driver configuration header file 
-* Version     : 2.0.0 - Redesigned for clarity and maintainability
+* Version     : 3.1.0 - Redesigned for clarity and maintainability
 * Date        : 24/06/2025
+* Update      : 23/07/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
 ****************************************************************************************/
@@ -42,8 +43,7 @@
 
 
 #define ADC_ENABLE_STREAMING        STD_ON  /*!< Enable streaming mode */ 
-//TODO : Remove
-// #define ADC_ENABLE_NOTIFICATIONS    STD_ON  /*!< Enable notification callbacks */ 
+#define ADC_ENABLE_NOTIFICATIONS    STD_ON  /*!< Enable notification callbacks */ 
 
 /*Not used */
 #define ADC_ENABLE_LIMIT_CHECKING   STD_OFF /*!< Enable limit checking */ 
@@ -198,8 +198,8 @@ void Adc_WatchdogTimeout_Callback(Adc_GroupType GroupId);
 *                              VALIDATION MACROS                                       *
 ****************************************************************************************/
 /* Configuration Validation */
-#if (ADC_MAX_GROUPS > 16)
-#error "ADC_MAX_GROUPS cannot exceed 16"
+#if (ADC_MAX_CHANNELS > 16)
+#error "ADC_MAX_CHANNELS cannot exceed 16"
 #endif
 
 /* UNUSED - Channel validation not used since ADC_MAX_CHANNELS is commented out */

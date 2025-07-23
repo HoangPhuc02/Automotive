@@ -4,8 +4,9 @@
 * File Name   : Adc_Types.h
 * Module      : Analog to Digital Converter (ADC)
 * Description : AUTOSAR ADC driver type definitions header file 
-* Version     : 2.0.0 - Redesigned for clarity and maintainability
+* Version     : 3.1.0 - Redesigned for clarity and maintainability
 * Date        : 24/06/2025
+* Update      : 23/07/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
 ****************************************************************************************/
@@ -23,8 +24,7 @@
 /****************************************************************************************
 *                                 FEATURE MACROS                                       *
 ****************************************************************************************/
-#define ADC_NOTIFICATION_ENABLE     1
-#define ADC_NOTIFICATION_DISABLE    0
+
 
 #define ADC_PRIORITY_IMPLEMENTATION 0
 
@@ -336,6 +336,13 @@ typedef struct
     Adc_SamplingTimeType    Adc_ChannelSampTime;    /*!< Sampling time */
 } Adc_ChannelDefType;
 
+
+typedef enum 
+{
+    ADC_NOTIFICATION_ENABLE           = STD_ON , /*!< ADC notification enabled*/
+    ADC_NOTIFICATION_DISABLE          = STD_OFF /*!< ADC notification disabled*/
+}Adc_NotificationEnableType;
+
 /**
  * @brief   Adc_GroupDefType
  * @typedef struct
@@ -377,9 +384,9 @@ typedef struct
     uint8                   Adc_SetupBufferFlag;   /*!< Check buffer is reset 1: Reset, 0: Not reset yet*/
     
     /* Notification Configuration */
-    Adc_NotificationCallBack Adc_NotificationCb;    /*!< Notification callback */
-    uint8                    Adc_NotificationEnable; /*!< Notification enable flag */
-    Adc_NvicType             Adc_InterruptType;     /*!< NVIC type */
+    Adc_NotificationCallBack     Adc_NotificationCb;    /*!< Notification callback */
+    Adc_NotificationEnableType   Adc_NotificationEnable; /*!< Notification enable flag */
+    Adc_NvicType                 Adc_InterruptType;     /*!< NVIC type */
 
 } Adc_GroupDefType;
 
@@ -393,6 +400,8 @@ typedef enum
     ADC_DMA_AVAILABLE           = STD_ON , /*!< ADC DMA available*/
     ADC_DMA_NOT_AVAILABLE       = STD_OFF /*!< ADC DMA not available*/
 }Adc_HwDmaAvailable;
+
+
 
 /**
  * @brief   Adc_HwUnitDefType
@@ -461,12 +470,10 @@ typedef struct
  */
 typedef struct
 {
-    volatile Adc_StatusType          Status;                 /*!< Current group status */
-    volatile Adc_ChannelType         CurrentChannelId;       /*!< Current converting channel */
-    volatile Adc_StreamNumSampleType SampleCounter;         /*!< Current sample count */
-    volatile uint16                  BufferIndex;            /*!< Current buffer index */
-    volatile uint8                   NotificationPending;    /*!< Notification pending flag */
-    
+    Adc_StatusType          Status;                 /*!< Current group status */
+    Adc_ChannelType         CurrentChannelId;       /*!< Current converting channel */
+    Adc_StreamNumSampleType SampleCounter;         /*!< Current sample count */
+    uint16                  BufferIndex;            /*!< Current buffer index */
 } Adc_RuntimeGroupType;
 
 /**
@@ -483,16 +490,16 @@ typedef enum
 
 typedef struct
 {
-    volatile Adc_GroupType           CurrentGroupId;         /*!< Currently active group */
-    volatile Adc_HwUnitStateType     HwUnitState;             /*!< Hardware unit state flag */
+    Adc_GroupType           CurrentGroupId;         /*!< Currently active group */
+    Adc_HwUnitStateType     HwUnitState;             /*!< Hardware unit state flag */
     
     /* Used for queue and sw conversion*/
 
-    volatile Adc_GroupType*          QueueGroup;             /*!< Group queue*/
-    volatile Adc_GroupType           QueueMaxSize;           /*!< Group queue max size*/ 
-    volatile Adc_GroupType           QueueHead;              /*!< Queue head index */
-    volatile Adc_GroupType           QueueTail;              /*!< Queue tail index */
-    volatile Adc_GroupType           QueueCount;             /*!< Number of queued groups */
+    Adc_GroupType*          QueueGroup;             /*!< Group queue*/
+    Adc_GroupType           QueueMaxSize;           /*!< Group queue max size*/ 
+    Adc_GroupType           QueueHead;              /*!< Queue head index */
+    Adc_GroupType           QueueTail;              /*!< Queue tail index */
+    Adc_GroupType           QueueCount;             /*!< Number of queued groups */
     
     
 } Adc_RuntimeHwUnitType;

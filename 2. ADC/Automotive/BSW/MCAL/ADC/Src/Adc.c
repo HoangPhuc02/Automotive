@@ -4,8 +4,9 @@
 * File Name   : Adc.c
 * Module      : Analog to Digital Converter (ADC)
 * Description : AUTOSAR ADC driver source file 
-* Version     : 2.0.0 - Redesigned for clarity and maintainability
+* Version     : 3.1.0 - Redesigned for clarity and maintainability
 * Date        : 24/06/2025
+* Update      : 23/07/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
 ****************************************************************************************/
@@ -233,7 +234,6 @@ void Adc_StartGroupConversion(Adc_GroupType Group)
         return;
     }
 
-    // TODO fix this code to not allow hw source config
     /* Get group configuration */
     const Adc_GroupDefType* GroupConfig = &Adc_GroupConfig[Group];
     Adc_HwUnitType HwUnit = GroupConfig->Adc_HwUnitId;
@@ -329,8 +329,6 @@ Std_ReturnType Adc_ReadGroup(Adc_GroupType Group,
     {
         return E_NOT_OK;
     }
-        /* Handle status transitions according to AUTOSAR */
-    Adc_HandleGroupCompletion(Group);
     return E_OK;
 }
 
@@ -515,7 +513,7 @@ Adc_StreamNumSampleType Adc_GetStreamLastPointer(Adc_GroupType Group,
     Adc_ChannelType NbrOfChannel = GroupConfig->Adc_NbrOfChannel;
     *PtrToSamplePtr = &GroupConfig->Adc_ValueResultPtr[(NbrOfSample - 1) * NbrOfChannel];
 
-    Adc_HandleGroupCompletion(Group);
+    AdcHw_HandleReadResultState(GroupConfig->Adc_HwUnitId, Group);
     return NbrOfSample;
 }
 

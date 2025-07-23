@@ -4,8 +4,9 @@
 * File Name   : Adc.h
 * Module      : Analog to Digital Converter (ADC)
 * Description : AUTOSAR ADC driver header file 
-* Version     : 2.0.0
+* Version     : 3.1.0
 * Date        : 24/06/2025
+* Update      : 23/07/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
 ****************************************************************************************/
@@ -30,7 +31,7 @@
 #define ADC_VENDOR_ID           0x0001  /* Vendor ID for ADC driver */ 
 #define ADC_MODULE_ID           0x0037  /* Module ID for ADC driver (37 per AUTOSAR) */
 #define ADC_SW_MAJOR_VERSION    3
-#define ADC_SW_MINOR_VERSION    0
+#define ADC_SW_MINOR_VERSION    1
 #define ADC_SW_PATCH_VERSION    0 
 #define ADC_AR_RELEASE_MAJOR_VERSION    4
 #define ADC_AR_RELEASE_MINOR_VERSION    4
@@ -258,6 +259,12 @@ Adc_StreamNumSampleType Adc_GetStreamLastPointer (Adc_GroupType Group,
  * @reqs    SWS_Adc_00376
  */
 void Adc_GetVersionInfo (Std_VersionInfoType* versioninfo);
+
+/**
+ * @brief   Main function for deferred ADC processing
+ * @return  void
+ */
+void Adc_MainFunction(void);
 
 /**
  * @brief   This API configures the Adc module so that 

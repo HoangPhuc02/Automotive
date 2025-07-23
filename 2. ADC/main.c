@@ -18,8 +18,6 @@
 #include "Dio.h"
 #include "Port.h"
 #include "Adc.h"
-#include "Adc_Types.h"
-#include "Adc_Cfg.h"
 
 uint16 buffer[200];
 extern const Port_ConfigType PortCfg_Port; 
@@ -86,7 +84,7 @@ int main()
 
     // Adc_StartGroupConversion(Adc_Config.Groups[1].Adc_GroupId);
     // Adc_StartGroupConversion(Adc_Config.Groups[2].Adc_GroupId);
-    Adc_GroupType i = 0;
+
     while (1)
     {
         // Start ADC conversion

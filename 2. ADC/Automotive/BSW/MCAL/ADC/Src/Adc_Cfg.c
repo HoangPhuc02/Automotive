@@ -4,8 +4,9 @@
 * File Name   : Adc_Cfg.c
 * Module      : Analog to Digital Converter (ADC)
 * Description : AUTOSAR ADC driver configuration source file
-* Version     : 2.0.0 - Redesigned for clarity and maintainability
+* Version     : 3.1.0 - Redesigned for clarity and maintainability
 * Date        : 24/06/2025
+* Update      : 23/07/2025
 * Author      : hoangphuc540202@gmail.com
 * Github      : https://github.com/HoangPhuc02
 ****************************************************************************************/
@@ -172,13 +173,13 @@ Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS] =
         .Adc_HwUnitId = ADC_INSTANCE_1,                               /* ADC Hardware Unit 0 (ADC1) */
         .Adc_GroupId = 0,                                /* Group 0 (internally Group 1) */
         .Adc_GroupPriority = 1,                          /* Highest priority */
-        // .Adc_GroupAccessMode = ADC_ACCESS_MODE_SINGLE,
-        // .Adc_ValueResultSize = 2,
-        // .Adc_StreamNumSamples = 1,     
+        .Adc_GroupAccessMode = ADC_ACCESS_MODE_SINGLE,
+        .Adc_ValueResultSize = 2,
+        .Adc_StreamNumSamples = 1,     
 
-        .Adc_GroupAccessMode = ADC_ACCESS_MODE_STREAMING,
-        .Adc_StreamNumSamples = 4, 
-        .Adc_ValueResultSize = 8,    
+        // .Adc_GroupAccessMode = ADC_ACCESS_MODE_STREAMING,
+        // .Adc_StreamNumSamples = 4, 
+        // .Adc_ValueResultSize = 8,    
         
         .Adc_GroupConvMode = ADC_CONV_MODE_ONESHOT,
         // .Adc_GroupConvMode = ADC_CONV_MODE_CONTINUOUS,
@@ -320,7 +321,7 @@ Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS] =
         .AdcHw_PriorityEnable = ADC_PRIORITY_IMPLEMENTATION,
         // .AdcHw_DMAAvailable = ADC_DMA_AVAILABLE,         /* DMA available */
         // Test
-        .AdcHw_DMAAvailable = ADC_DMA_NOT_AVAILABLE,     /* DMA not available */
+        .AdcHw_DMAAvailable = ADC_DMA_AVAILABLE,     /* DMA not available */
     },
     
     /* ADC Hardware Unit 1 (ADC2) */
