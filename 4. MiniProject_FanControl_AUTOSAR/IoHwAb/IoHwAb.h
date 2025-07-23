@@ -28,8 +28,26 @@
  *  INCLUDES
  * =====================================================
  */
-#include "Std_Types.h"      /* AUTOSAR standard types */
+#include "Common/Inc/Std_Types.h"      /* AUTOSAR standard types */
+#include "MCAL/Port/Inc/Port.h"       /* Port Driver for GPIO configuration */
+#include "MCAL/Dio/Inc/Dio.h"        /* DIO Driver for digital I/O */
+#include "MCAL/Adc/Inc/Adc.h"        /* ADC Driver for analog reading */
+#include "MCAL/Pwm/Inc/Pwm.h"        /* PWM Driver for fan control */
+// #include "Config/Inc/Adc_Cfg.h"
 
+extern const Port_PinConfigType PortCfg_Pins[PortCfg_PinsCount];
+extern const Port_ConfigType PortCfg_Port; /* Port configuration structure */
+
+extern Adc_GroupDefType Adc_GroupConfig[ADC_MAX_GROUPS];
+extern Adc_HwUnitDefType Adc_HwUnitConfig[ADC_MAX_HW_UNITS];
+extern const Adc_ConfigType Adc_Config;
+/* Result Buffers */
+extern Adc_ValueGroupType Adc_ResultBuffer[ADC_MAX_GROUPS][ADC_MAX_BUFFER_SIZE];
+extern Adc_ValueGroupType Adc_Group1_ResultBuffer[ADC_CHANNEL_GROUP_1_RESULT_SIZE];  
+
+extern const Pwm_ConfigType Pwm_Config;
+extern Pwm_ChannelConfigType Pwm_ChannelConfig[PWM_MAX_CHANNELS];
+extern Pwm_HwUnitConfigType Pwm_HwUnitConfig[PWM_MAX_HW_UNITS];
 /*
  * =====================================================
  *  TYPE DEFINITIONS
@@ -50,6 +68,7 @@ typedef enum
     TEMP_SENSOR_NTC  = 1       /* NTC thermistor */
 } IoHwAb_TempSensorType;
 
+
 /*
  * =====================================================
  *  CONSTANTS AND MACROS
@@ -57,34 +76,52 @@ typedef enum
  */
 
 /* Module version information */
-#define IOHWAB_VENDOR_ID                    1u
-#define IOHWAB_MODULE_ID                    255u    /* IoHwAb doesn't have standard ID */
-#define IOHWAB_AR_RELEASE_MAJOR_VERSION     4u
-#define IOHWAB_AR_RELEASE_MINOR_VERSION     2u
-#define IOHWAB_AR_RELEASE_REVISION_VERSION  2u
-#define IOHWAB_SW_MAJOR_VERSION             1u
-#define IOHWAB_SW_MINOR_VERSION             0u
-#define IOHWAB_SW_PATCH_VERSION             0u
+#define IOHWAB_VENDOR_ID                    1
+#define IOHWAB_MODULE_ID                    255    /* IoHwAb doesn't have standard ID */
+#define IOHWAB_AR_RELEASE_MAJOR_VERSION     4
+#define IOHWAB_AR_RELEASE_MINOR_VERSION     2
+#define IOHWAB_AR_RELEASE_REVISION_VERSION  2
+#define IOHWAB_SW_MAJOR_VERSION             1
+#define IOHWAB_SW_MINOR_VERSION             0
+#define IOHWAB_SW_PATCH_VERSION             0
 
 /* Hardware pin assignments */
-#define IOHWAB_TEMP_SENSOR_PIN              0u      /* PA0 - ADC input */
-#define IOHWAB_FAN_PWM_PIN                  8u      /* PA8 - PWM output */
-#define IOHWAB_LED_STATUS_PIN               13u     /* PC13 - GPIO output */
+#define IOHWAB_TEMP_SENSOR_PIN              0      /* PA0 - ADC input */
+#define IOHWAB_FAN_PWM_PIN                  8      /* PA8 - PWM output */
+#define IOHWAB_LED_STATUS_PIN               13     /* PC13 - GPIO output */
 
 /* Temperature sensor specifications */
 #define IOHWAB_TEMP_SENSOR_TYPE             TEMP_SENSOR_LM35
-#define IOHWAB_TEMP_MIN_CELSIUS             -10     /* Minimum measurable temperature */
-#define IOHWAB_TEMP_MAX_CELSIUS             100     /* Maximum measurable temperature */
+#define IOHWAB_TEMP_MIN_CELSIUS             0     /* Minimum measurable temperature */
+#define IOHWAB_TEMP_MAX_CELSIUS             100    /* Maximum measurable temperature */
 #define IOHWAB_TEMP_INVALID_VALUE           0xFFFF  /* Invalid temperature reading */
 
 /* Fan control specifications */
-#define IOHWAB_FAN_DUTY_MIN                 0u      /* Minimum duty cycle (%) */
-#define IOHWAB_FAN_DUTY_MAX                 100u    /* Maximum duty cycle (%) */
+#define IOHWAB_FAN_DUTY_MIN                 0      /* Minimum duty cycle (%) */
+#define IOHWAB_FAN_DUTY_MAX                 100    /* Maximum duty cycle (%) */
 #define IOHWAB_FAN_PWM_FREQUENCY_HZ         10000u  /* PWM frequency: 10kHz */
 
 /* LED control */
 #define IOHWAB_LED_OFF                      FALSE
 #define IOHWAB_LED_ON                       TRUE
+
+
+/* ADC conversion constants for LM35 temperature sensor */
+#define IOHWAB_ADC_RESOLUTION           4095       /* 12-bit ADC: 0-4095 */
+#define IOHWAB_ADC_VREF_MV              3300       /* 3.3V reference in mV */
+#define IOHWAB_LM35_MV_PER_CELSIUS      10
+/* PWM conversion constants */
+#define IOHWAB_PWM_MAX_VALUE            0x8000     /* PWM driver max duty cycle */
+#define IOHWAB_PERCENT_MAX              100        /* 100% */
+
+/* ADC channel mapping */
+#define IOHWAB_ADC_CHANNEL_TEMP         0          /* ADC Channel 0 for PA0 */
+
+/* DIO channel mapping */
+#define IOHWAB_DIO_CHANNEL_LED          DIO_CHANNEL_C13        /* DIO Channel for PC13 LED */
+
+/* PWM channel mapping */
+#define IOHWAB_PWM_CHANNEL_FAN          0          /* PWM Channel 0 for PA8 */
 
 /*
  * =====================================================

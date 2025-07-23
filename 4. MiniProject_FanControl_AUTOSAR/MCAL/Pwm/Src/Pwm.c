@@ -121,12 +121,9 @@ void Pwm_Init(const Pwm_ConfigType* ConfigPtr)
             ChannelConfig->NotificationEnabled = FALSE;
         }
     }
-    // TODO fix this 
     NVIC_EnableIRQ(TIM1_UP_IRQn);
     NVIC_EnableIRQ(TIM1_CC_IRQn);
-    NVIC_EnableIRQ(TIM2_IRQn);
-    NVIC_EnableIRQ(TIM3_IRQn);
-    NVIC_EnableIRQ(TIM4_IRQn);
+
     /* Set driver state to initialized */
     Pwm_DriverState = PWM_STATE_INIT;
 }
@@ -494,6 +491,7 @@ void Pwm_NotificationHandler(Pwm_HwUnitType HwUnit, uint16 TIM_IT)
             Pwm_ChannelConfig[ChannelId].NotificationPtr();
         }
     }
+    /*
     else if(TIM_IT == TIM_IT_CC2)
     {
         Pwm_ChannelType ChannelId = HwUnit * PWM_CHANNELS_PER_HW_UNIT + PWM_CHANNEL_1;
@@ -524,6 +522,7 @@ void Pwm_NotificationHandler(Pwm_HwUnitType HwUnit, uint16 TIM_IT)
             Pwm_ChannelConfig[ChannelId].NotificationPtr();
         }
     }
+    */
 }
 
 /****************************************************************************************

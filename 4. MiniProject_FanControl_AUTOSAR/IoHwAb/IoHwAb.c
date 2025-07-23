@@ -16,34 +16,8 @@
  * =====================================================
  */
 #include "IoHwAb.h"
-#include "Port.h"       /* Port Driver for GPIO configuration */
-#include "Dio.h"        /* DIO Driver for digital I/O */
-#include "Adc.h"        /* ADC Driver for analog reading */
-#include "Pwm.h"        /* PWM Driver for fan control */
 
-/*
- * =====================================================
- *  LOCAL CONSTANTS AND MACROS
- * =====================================================
- */
 
-/* ADC conversion constants for LM35 temperature sensor */
-#define IOHWAB_ADC_RESOLUTION           4095u       /* 12-bit ADC: 0-4095 */
-#define IOHWAB_ADC_VREF_MV              3300u       /* 3.3V reference in mV */
-#define IOHWAB_LM35_MV_PER_CELSIUS      10u         /* LM35: 10mV/°C */
-
-/* PWM conversion constants */
-#define IOHWAB_PWM_MAX_VALUE            0x8000u     /* PWM driver max duty cycle */
-#define IOHWAB_PERCENT_MAX              100u        /* 100% */
-
-/* ADC channel mapping */
-#define IOHWAB_ADC_CHANNEL_TEMP         0u          /* ADC Channel 0 for PA0 */
-
-/* DIO channel mapping */
-#define IOHWAB_DIO_CHANNEL_LED          DioConf_DioChannel_LED_STATUS
-
-/* PWM channel mapping */
-#define IOHWAB_PWM_CHANNEL_FAN          0u          /* PWM Channel 0 for PA8 */
 
 /*
  * =====================================================
@@ -59,7 +33,7 @@ static IoHwAb_StateType IoHwAb_ModuleState = IOHWAB_UNINITIALIZED;
 static uint8 IoHwAb_CurrentFanDuty = 0u;
 static boolean IoHwAb_CurrentLedState = FALSE;
 #endif
-
+Adc_GroupType AdcConf_AdcGroup_TemperatureSensor = 0; /* ADC group for temperature sensor */
 /*
  * =====================================================
  *  LOCAL FUNCTION PROTOTYPES
@@ -108,20 +82,22 @@ void IoHwAb_Init(void)
     /* TODO: Initialize all MCAL drivers in correct order */
     
     /* 1. Initialize Port Driver first (GPIO configuration) */
-    Port_Init(&Port_Config);
+    Port_Init(&PortCfg_Port);
     
     /* 2. Initialize DIO Driver */
     /* DIO driver usually doesn't need explicit initialization */
     
     /* 3. Initialize ADC Driver */
     Adc_Init(&Adc_Config);
-    
+    Adc_SetupResultBuffer(AdcConf_AdcGroup_TemperatureSensor, Adc_Group1_ResultBuffer);
     /* 4. Initialize PWM Driver */
     Pwm_Init(&Pwm_Config);
     
     /* Set initial states */
     IoHwAb_SetFanDuty(IOHWAB_FAN_DUTY_MIN);    /* Fan OFF initially */
     IoHwAb_SetLed(IOHWAB_LED_OFF);             /* LED OFF initially */
+
+    // Adc_StartGroupConversion(AdcConf_AdcGroup_TemperatureSensor);
     
     /* Mark module as initialized */
     IoHwAb_ModuleState = IOHWAB_INITIALIZED;
@@ -142,10 +118,8 @@ uint16 IoHwAb_ReadTemperature(void)
         return IOHWAB_TEMP_INVALID_VALUE;
     }
     
-    /* TODO: Start ADC conversion and read result */
-    /* Method 1: Single conversion (blocking) */
-    /*
-    Adc_StartGroupConversion(AdcConf_AdcGroup_TemperatureSensor);
+
+     Adc_StartGroupConversion(AdcConf_AdcGroup_TemperatureSensor);
     
     // Wait for conversion to complete
     while (Adc_GetGroupStatus(AdcConf_AdcGroup_TemperatureSensor) != ADC_STREAM_COMPLETED)
@@ -154,28 +128,11 @@ uint16 IoHwAb_ReadTemperature(void)
     }
     
     // Read ADC result
-    if (Adc_ReadGroup(AdcConf_AdcGroup_TemperatureSensor, &adcValue) == E_OK)
+    if (Adc_ReadGroup(AdcConf_AdcGroup_TemperatureSensor, &temperature) == E_OK)
     {
-        temperature = IoHwAb_ConvertAdcToTemperature(adcValue);
+        // temperature = IoHwAb_ConvertAdcToTemperature(adcValue);
     }
-    */
-    
-    /* Method 2: Direct channel read (if supported) */
-    /*
-    adcValue = Adc_ReadChannel(IOHWAB_ADC_CHANNEL_TEMP);
-    temperature = IoHwAb_ConvertAdcToTemperature(adcValue);
-    */
-    
-    /* PLACEHOLDER: For initial testing without full ADC implementation */
-    /* Remove this and implement actual ADC reading */
-    adcValue = 1000;  /* Simulate ~25°C reading */
-    temperature = IoHwAb_ConvertAdcToTemperature(adcValue);
-    
-    /* Validate temperature range */
-    if ((temperature < IOHWAB_TEMP_MIN_CELSIUS) || (temperature > IOHWAB_TEMP_MAX_CELSIUS))
-    {
-        return IOHWAB_TEMP_INVALID_VALUE;
-    }
+   //TODO: BUG READ GROUP NOT GET THE VALUE RESULT
     
     return temperature;
 }
@@ -206,10 +163,6 @@ void IoHwAb_SetFanDuty(uint8 percent)
     /* Set PWM duty cycle */
     Pwm_SetDutyCycle(IOHWAB_PWM_CHANNEL_FAN, pwmDutyValue);
     
-    #ifdef IOHWAB_EXTENDED_FEATURES
-    /* Store current value for extended features */
-    IoHwAb_CurrentFanDuty = percent;
-    #endif
 }
 
 /*
@@ -228,106 +181,15 @@ void IoHwAb_SetLed(boolean state)
     
     /* Convert boolean to DIO level */
     /* Note: LED might be active low or active high depending on hardware */
-    /* Assuming active high (LED ON = HIGH) */
-    dioLevel = (state == TRUE) ? STD_HIGH : STD_LOW;
+    /* Assuming active low (LED ON = LOW) */
+    dioLevel = (state == TRUE) ? STD_LOW : STD_HIGH; // Active low logic
     
     /* Set LED state */
     Dio_WriteChannel(IOHWAB_DIO_CHANNEL_LED, dioLevel);
     
-    #ifdef IOHWAB_EXTENDED_FEATURES
-    /* Store current value for extended features */
-    IoHwAb_CurrentLedState = state;
-    #endif
 }
 
-/*
- * Function: IoHwAb_GetModuleState
- * Description: Get current module initialization state
- */
-IoHwAb_StateType IoHwAb_GetModuleState(void)
-{
-    return IoHwAb_ModuleState;
-}
 
-/*
- * =====================================================
- *  EXTENDED FEATURES IMPLEMENTATION
- * =====================================================
- */
-
-#ifdef IOHWAB_EXTENDED_FEATURES
-
-/*
- * Function: IoHwAb_ReadRawAdc
- * Description: Read raw ADC value without temperature conversion
- */
-uint16 IoHwAb_ReadRawAdc(void)
-{
-    uint16 adcValue = 0;
-    
-    if (IoHwAb_ModuleState != IOHWAB_INITIALIZED)
-    {
-        return 0;
-    }
-    
-    /* TODO: Read raw ADC value */
-    /* adcValue = Adc_ReadChannel(IOHWAB_ADC_CHANNEL_TEMP); */
-    
-    /* PLACEHOLDER */
-    adcValue = 1000;  /* Simulate ADC reading */
-    
-    return adcValue;
-}
-
-/*
- * Function: IoHwAb_GetFanDuty
- * Description: Get current fan duty cycle
- */
-uint8 IoHwAb_GetFanDuty(void)
-{
-    return IoHwAb_CurrentFanDuty;
-}
-
-/*
- * Function: IoHwAb_GetLedState
- * Description: Get current LED state
- */
-boolean IoHwAb_GetLedState(void)
-{
-    return IoHwAb_CurrentLedState;
-}
-
-/*
- * Function: IoHwAb_SelfTest
- * Description: Perform self-test of hardware components
- */
-boolean IoHwAb_SelfTest(void)
-{
-    boolean testResult = TRUE;
-    
-    if (IoHwAb_ModuleState != IOHWAB_INITIALIZED)
-    {
-        return FALSE;
-    }
-    
-    /* TODO: Implement self-test procedures */
-    
-    /* Test 1: ADC self-test */
-    /* - Read ADC with known reference voltage */
-    /* - Check if reading is within expected range */
-    
-    /* Test 2: PWM output test */
-    /* - Set known duty cycle and verify output */
-    /* - Could use input capture on another pin to measure */
-    
-    /* Test 3: LED test */
-    /* - Toggle LED and verify state change */
-    /* - Could read GPIO input register to verify output */
-    
-    return testResult;
-}
-
-#endif /* IOHWAB_EXTENDED_FEATURES */
 
 /*
  * =====================================================

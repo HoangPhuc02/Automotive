@@ -71,6 +71,20 @@ Project_FanControl_AUTOSAR/
     └── Pwm_Cfg.c           # PWM configuration
 ```
 
+```
+/* Hàm khởi tạo IoHwAb module */
+void IoHwAb_Init(void);
+
+/* Đọc nhiệt độ hiện tại (trả về giá trị nhiệt độ theo °C) */
+uint16 IoHwAb_ReadTemperature(void);
+
+/* Thiết lập tốc độ quạt (duty cycle %) */
+void IoHwAb_SetFanDuty(uint8 percent);
+
+/* Điều khiển trạng thái LED báo */
+void IoHwAb_SetLed(boolean state);
+```
+
 ## 🚀 Hướng Dẫn Triển Khai
 
 ### Bước 1: Thiết Kế Sơ Đồ Mạch

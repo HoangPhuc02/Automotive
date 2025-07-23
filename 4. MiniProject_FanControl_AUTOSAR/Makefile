@@ -24,51 +24,51 @@ SRC_DIR = .
 MCAL_DIR = MCAL
 IOHWAB_DIR = IoHwAb
 CONFIG_DIR = Config
+COMM_DIR  = Common
 BUILD_DIR = build
+SPL_DIR = SPL
 
+DIO_SOURCES = $(wildcard $(MCAL_DIR)/Dio/Src/*.c)
+PORT_SOURCES = $(wildcard $(MCAL_DIR)/Port/Src/*.c)
+ADC_SOURCES = $(wildcard $(MCAL_DIR)/Adc/Src/*.c)
+PWM_SOURCES = $(wildcard $(MCAL_DIR)/Pwm/Src/*.c)
+BSW_SOURCES = $(DIO_SOURCES) $(PORT_SOURCES) $(ADC_SOURCES) $(PWM_SOURCES)
+CFG_SOURCES = $(wildcard $(CONFIG_DIR)/Src/*.c)
+SPL_SOURCES = $(wildcard $(SPL_DIR)/Src/*.c)
 # Source files
 SOURCES = main.c \
-          $(IOHWAB_DIR)/IoHwAb.c \
-          $(MCAL_DIR)/Port/Port.c \
-          $(MCAL_DIR)/Dio/Dio.c \
-          $(MCAL_DIR)/Adc/Adc.c \
-          $(MCAL_DIR)/Pwm/Pwm.c \
-          $(CONFIG_DIR)/Port_Cfg.c \
-          $(CONFIG_DIR)/Dio_Cfg.c \
-          $(CONFIG_DIR)/Adc_Cfg.c \
-          $(CONFIG_DIR)/Pwm_Cfg.c
+		isr.c\
+		 startup_stm32f103.s \
+		 $(BSW_SOURCES) \
+		 $(CFG_SOURCES) \
+		 $(SPL_SOURCES) \
+        $(IOHWAB_DIR)/IoHwAb.c
+
 
 # Include directories
 INCLUDES = -I. \
+		   -ICore \
+           -I$(SPL_DIR)/Inc \
            -I$(IOHWAB_DIR) \
-           -I$(MCAL_DIR)/Port \
-           -I$(MCAL_DIR)/Dio \
-           -I$(MCAL_DIR)/Adc \
-           -I$(MCAL_DIR)/Pwm \
-           -I$(CONFIG_DIR)
+		   -I$(MCAL_DIR)/Dio/Inc \
+		   -I$(MCAL_DIR)/Port/Inc \
+		   -I$(MCAL_DIR)/Adc/Inc \
+		   -I$(MCAL_DIR)/Pwm/Inc \
+		   -I$(MCAL_DIR)/Det/Inc \
+		   -I$(COMM_DIR)/Inc \
+           -I$(CONFIG_DIR)/Inc
 
 # Compiler flags
-CFLAGS = -mcpu=cortex-m3 \
-         -mthumb \
-         -Wall \
-         -Wextra \
-         -Werror \
-         -std=c99 \
-         -O2 \
-         -g \
-         -DSTM32F103xB \
-         $(INCLUDES)
+CFLAGS  = -mcpu=cortex-m3 -mthumb -O0 -g -Wall -ffreestanding -nostdlib \
+			$(INCLUDES) \
+			-DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER
 
 # Linker flags
-LDFLAGS = -mcpu=cortex-m3 \
-          -mthumb \
-          -specs=nano.specs \
-          -specs=nosys.specs \
-          -static \
-          -Wl,--gc-sections
+LDFLAGS = -T stm32f103.ld -nostdlib -Wl,--gc-sections
 
 # Generate object file names
 OBJECTS = $(SOURCES:%.c=$(BUILD_DIR)/%.o)
+OBJECTS := $(OBJECTS:%.s=$(BUILD_DIR)/%.o)
 
 # Default target
 all: $(BUILD_DIR)/$(PROJECT).elf $(BUILD_DIR)/$(PROJECT).bin $(BUILD_DIR)/$(PROJECT).hex
@@ -77,15 +77,22 @@ all: $(BUILD_DIR)/$(PROJECT).elf $(BUILD_DIR)/$(PROJECT).bin $(BUILD_DIR)/$(PROJ
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)/$(IOHWAB_DIR)
-	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Port
-	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Dio
-	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Adc
-	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Pwm
-	mkdir -p $(BUILD_DIR)/$(CONFIG_DIR)
-
+	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Port/Src
+	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Dio/Src
+	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Adc/Src
+	mkdir -p $(BUILD_DIR)/$(MCAL_DIR)/Pwm/Src
+	mkdir -p $(BUILD_DIR)/$(CONFIG_DIR)/Src
+	mkdir -p $(BUILD_DIR)/$(SPL_DIR)/Src
 # Compile source files
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	@echo "Compiling $<"
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Assemble assembly files
+$(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
+	@echo "Assembling $<"
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Link object files
@@ -107,7 +114,8 @@ $(BUILD_DIR)/$(PROJECT).hex: $(BUILD_DIR)/$(PROJECT).elf
 # Flash to target (requires st-link)
 flash: $(BUILD_DIR)/$(PROJECT).bin
 	@echo "Flashing to STM32F103C8T6"
-	st-flash write $(BUILD_DIR)/$(PROJECT).bin 0x8000000
+	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg -c "program $(BUILD_DIR)/$(PROJECT).bin 0x08000000 verify reset exit"
+
 
 # Clean build files
 clean:

@@ -1,0 +1,91 @@
+/***************************************************************************************
+*                                   DIO_CFG.H                                              *
+****************************************************************************************
+* File Name   : Dio_Cfg.h
+* Module      : Digital Input/Output (DIO)
+* Description : AUTOSAR DIO driver header file
+* Version     : 1.0.0
+* Date        : 20/06/2025
+* Author      : hoangphuc540202@gmail.com
+* Github      : https://github.com/HoangPhuc02
+****************************************************************************************/
+
+#ifndef DIO_CFG_H
+#define DIO_CFG_H
+
+/* Macro to identify GPIO PORT and GPIO PIN from Channel ID */
+#define DIO_PORT_A 0    /* Mapping for GPIO Port A */
+#define DIO_PORT_B 1    /* Mapping for GPIO Port B */
+#define DIO_PORT_C 2    /* Mapping for GPIO Port C */
+#define DIO_PORT_D 3    /* Mapping for GPIO Port D */
+
+/* MACRO TO CONVERT GPIO PIN TO CHANNEL ID */
+#define DIO_CHANNEL_A0      DIO_GET_CHANNEL_ID(DIO_PORT_A, 0)  // GPIOA Pin 0
+#define DIO_CHANNEL_A1      DIO_GET_CHANNEL_ID(DIO_PORT_A, 1)  // GPIOA Pin 1
+#define DIO_CHANNEL_A2      DIO_GET_CHANNEL_ID(DIO_PORT_A, 2)  // GPIOA Pin 2
+#define DIO_CHANNEL_A3      DIO_GET_CHANNEL_ID(DIO_PORT_A, 3)  // GPIOA Pin 3
+#define DIO_CHANNEL_A4      DIO_GET_CHANNEL_ID(DIO_PORT_A, 4)  // GPIOA Pin 4
+#define DIO_CHANNEL_A5      DIO_GET_CHANNEL_ID(DIO_PORT_A, 5)  // GPIOA Pin 5
+#define DIO_CHANNEL_A6      DIO_GET_CHANNEL_ID(DIO_PORT_A, 6)  // GPIOA Pin 6
+#define DIO_CHANNEL_A7      DIO_GET_CHANNEL_ID(DIO_PORT_A, 7)  // GPIOA Pin 7
+#define DIO_CHANNEL_A8      DIO_GET_CHANNEL_ID(DIO_PORT_A, 8)  // GPIOA Pin 8
+#define DIO_CHANNEL_A9      DIO_GET_CHANNEL_ID(DIO_PORT_A, 9)  // GPIOA Pin 9
+#define DIO_CHANNEL_A10     DIO_GET_CHANNEL_ID(DIO_PORT_A, 10) // GPIOA Pin 10
+#define DIO_CHANNEL_A11     DIO_GET_CHANNEL_ID(DIO_PORT_A, 11) // GPIOA Pin 11
+#define DIO_CHANNEL_A12     DIO_GET_CHANNEL_ID(DIO_PORT_A, 12) // GPIOA Pin 12
+#define DIO_CHANNEL_A13     DIO_GET_CHANNEL_ID(DIO_PORT_A, 13) // GPIOA Pin 13
+#define DIO_CHANNEL_A14     DIO_GET_CHANNEL_ID(DIO_PORT_A, 14) // GPIOA Pin 14
+#define DIO_CHANNEL_A15     DIO_GET_CHANNEL_ID(DIO_PORT_A, 15) // GPIOA Pin 15
+
+#define DIO_CHANNEL_B0      DIO_GET_CHANNEL_ID(DIO_PORT_B, 0)  // GPIOB Pin 0
+#define DIO_CHANNEL_B1      DIO_GET_CHANNEL_ID(DIO_PORT_B, 1)  // GPIOB Pin 1
+#define DIO_CHANNEL_B2      DIO_GET_CHANNEL_ID(DIO_PORT_B, 2)  // GPIOB Pin 2
+#define DIO_CHANNEL_B3      DIO_GET_CHANNEL_ID(DIO_PORT_B, 3)  // GPIOB Pin 3
+#define DIO_CHANNEL_B4      DIO_GET_CHANNEL_ID(DIO_PORT_B, 4)  // GPIOB Pin 4
+#define DIO_CHANNEL_B5      DIO_GET_CHANNEL_ID(DIO_PORT_B, 5)  // GPIOB Pin 5
+#define DIO_CHANNEL_B6      DIO_GET_CHANNEL_ID(DIO_PORT_B, 6)  // GPIOB Pin 6
+#define DIO_CHANNEL_B7      DIO_GET_CHANNEL_ID(DIO_PORT_B, 7)  // GPIOB Pin 7
+#define DIO_CHANNEL_B8      DIO_GET_CHANNEL_ID(DIO_PORT_B, 8)  // GPIOB Pin 8
+#define DIO_CHANNEL_B9      DIO_GET_CHANNEL_ID(DIO_PORT_B, 9)  // GPIOB Pin 9
+#define DIO_CHANNEL_B10     DIO_GET_CHANNEL_ID(DIO_PORT_B, 10) // GPIOB Pin 10
+#define DIO_CHANNEL_B11     DIO_GET_CHANNEL_ID(DIO_PORT_B, 11) // GPIOB Pin 11
+#define DIO_CHANNEL_B12     DIO_GET_CHANNEL_ID(DIO_PORT_B, 12) // GPIOB Pin 12
+#define DIO_CHANNEL_B13     DIO_GET_CHANNEL_ID(DIO_PORT_B, 13) // GPIOB Pin 13
+#define DIO_CHANNEL_B14     DIO_GET_CHANNEL_ID(DIO_PORT_B, 14) // GPIOB Pin 14
+#define DIO_CHANNEL_B15     DIO_GET_CHANNEL_ID(DIO_PORT_B, 15) // GPIOB Pin 15
+
+#define DIO_CHANNEL_C0      DIO_GET_CHANNEL_ID(DIO_PORT_C, 0)  // GPIOC Pin 0
+#define DIO_CHANNEL_C1      DIO_GET_CHANNEL_ID(DIO_PORT_C, 1)  // GPIOC Pin 1
+#define DIO_CHANNEL_C2      DIO_GET_CHANNEL_ID(DIO_PORT_C, 2)  // GPIOC Pin 2
+#define DIO_CHANNEL_C3      DIO_GET_CHANNEL_ID(DIO_PORT_C, 3)  // GPIOC Pin 3
+#define DIO_CHANNEL_C4      DIO_GET_CHANNEL_ID(DIO_PORT_C, 4)  // GPIOC Pin 4
+#define DIO_CHANNEL_C5      DIO_GET_CHANNEL_ID(DIO_PORT_C, 5)  // GPIOC Pin 5
+#define DIO_CHANNEL_C6      DIO_GET_CHANNEL_ID(DIO_PORT_C, 6)  // GPIOC Pin 6
+#define DIO_CHANNEL_C7      DIO_GET_CHANNEL_ID(DIO_PORT_C, 7)  // GPIOC Pin 7
+#define DIO_CHANNEL_C8      DIO_GET_CHANNEL_ID(DIO_PORT_C, 8)  // GPIOC Pin 8
+#define DIO_CHANNEL_C9      DIO_GET_CHANNEL_ID(DIO_PORT_C, 9)  // GPIOC Pin 9
+#define DIO_CHANNEL_C10     DIO_GET_CHANNEL_ID(DIO_PORT_C, 10) // GPIOC Pin 10
+#define DIO_CHANNEL_C11     DIO_GET_CHANNEL_ID(DIO_PORT_C, 11) // GPIOC Pin 11
+#define DIO_CHANNEL_C12     DIO_GET_CHANNEL_ID(DIO_PORT_C, 12) // GPIOC Pin 12
+#define DIO_CHANNEL_C13     DIO_GET_CHANNEL_ID(DIO_PORT_C, 13) // GPIOC Pin 13
+#define DIO_CHANNEL_C14     DIO_GET_CHANNEL_ID(DIO_PORT_C, 14) // GPIOC Pin 14
+#define DIO_CHANNEL_C15     DIO_GET_CHANNEL_ID(DIO_PORT_C, 15) // GPIOC Pin 15
+
+#define DIO_CHANNEL_D0      DIO_GET_CHANNEL_ID(DIO_PORT_D, 0)  // GPIOD Pin 0
+#define DIO_CHANNEL_D1      DIO_GET_CHANNEL_ID(DIO_PORT_D, 1)  // GPIOD Pin 1
+#define DIO_CHANNEL_D2      DIO_GET_CHANNEL_ID(DIO_PORT_D, 2)  // GPIOD Pin 2
+#define DIO_CHANNEL_D3      DIO_GET_CHANNEL_ID(DIO_PORT_D, 3)  // GPIOD Pin 3
+#define DIO_CHANNEL_D4      DIO_GET_CHANNEL_ID(DIO_PORT_D, 4)  // GPIOD Pin 4
+#define DIO_CHANNEL_D5      DIO_GET_CHANNEL_ID(DIO_PORT_D, 5)  // GPIOD Pin 5
+#define DIO_CHANNEL_D6      DIO_GET_CHANNEL_ID(DIO_PORT_D, 6)  // GPIOD Pin 6
+#define DIO_CHANNEL_D7      DIO_GET_CHANNEL_ID(DIO_PORT_D, 7)  // GPIOD Pin 7
+#define DIO_CHANNEL_D8      DIO_GET_CHANNEL_ID(DIO_PORT_D, 8)  // GPIOD Pin 8
+#define DIO_CHANNEL_D9      DIO_GET_CHANNEL_ID(DIO_PORT_D, 9)  // GPIOD Pin 9
+#define DIO_CHANNEL_D10     DIO_GET_CHANNEL_ID(DIO_PORT_D, 10) // GPIOD Pin 10
+#define DIO_CHANNEL_D11     DIO_GET_CHANNEL_ID(DIO_PORT_D, 11) // GPIOD Pin 11
+#define DIO_CHANNEL_D12     DIO_GET_CHANNEL_ID(DIO_PORT_D, 12) // GPIOD Pin 12
+#define DIO_CHANNEL_D13     DIO_GET_CHANNEL_ID(DIO_PORT_D, 13) // GPIOD Pin 13
+#define DIO_CHANNEL_D14     DIO_GET_CHANNEL_ID(DIO_PORT_D, 14) // GPIOD Pin 14
+#define DIO_CHANNEL_D15     DIO_GET_CHANNEL_ID(DIO_PORT_D, 15) // GPIOD Pin 15
+
+#endif /* DIO_CFG_H */

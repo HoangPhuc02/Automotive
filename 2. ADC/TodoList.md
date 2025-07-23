@@ -99,7 +99,7 @@ The read group function will update data and set next state.
 - [x] Fixed group reading errors
 - [x] Optimized buffer data reading performance  
 - [x] Improved error handling for group reading
-- [ ] Handle the next conversion
+- [x] Handle the next conversion
 
 
 

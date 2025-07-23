@@ -10,10 +10,16 @@
  */
 
 #include "IoHwAb.h"
+#include "stm32f10x.h"
+#include "stm32f10x_rcc.h"
+#include "stm32f10x_flash.h"
 
 /* Temperature thresholds in Celsius */
-#define TEMP_LOW_THRESHOLD      30u    /* Below this: Fan OFF */
-#define TEMP_MEDIUM_THRESHOLD   40u    /* Above this: Fan 100% */
+// #define TEMP_LOW_THRESHOLD      20u    /* Below this: Fan OFF */
+// #define TEMP_MEDIUM_THRESHOLD   40u    /* Above this: Fan 100% */
+
+#define TEMP_LOW_THRESHOLD     1500u    /* Below this: Fan OFF */
+#define TEMP_MEDIUM_THRESHOLD  2500u    /* Above this: Fan 100% */
 
 /* Fan duty cycle percentages */
 #define FAN_DUTY_OFF           0u      /* Fan stopped */
@@ -42,10 +48,7 @@ void Application_Init(void)
     /* Initial state: Fan OFF, LED OFF */
     IoHwAb_SetFanDuty(FAN_DUTY_OFF);
     IoHwAb_SetLed(FALSE);
-    
-    /* TODO: Add any additional application initialization here */
 }
-
 /*
  * Function: Application_UpdateFanControl
  * Description: Update fan speed and LED status based on current temperature
@@ -93,20 +96,6 @@ void Application_UpdateFanControl(uint16 temperature)
 }
 
 /*
- * Function: Application_PrintStatus
- * Description: Print current system status (for debugging)
- * Parameters: None
- * Return: None
- */
-void Application_PrintStatus(void)
-{
-    /* TODO: Implement UART/SWO debugging output if needed */
-    /* printf("Temp: %d°C, Fan: %d%%, LED: %s\n", 
-             current_temperature, current_fan_duty, 
-             led_status ? "ON" : "OFF"); */
-}
-
-/*
  * Function: main
  * Description: Main application entry point
  * Parameters: None
@@ -125,10 +114,7 @@ int main(void)
         
         /* Update fan control based on temperature */
         Application_UpdateFanControl(current_temperature);
-        
-        /* Optional: Print status for debugging */
-        Application_PrintStatus();
-        
+
         /* TODO: Add delay or use system timer for proper timing */
         /* Simple delay - replace with proper timer in production code */
         for (volatile uint32 i = 0; i < 1000000; i++)
@@ -157,62 +143,53 @@ void SystemClock_Config(void)
      * - PLL to achieve 72MHz system clock
      * - Configure AHB, APB1, APB2 prescalers
      */
-}
-
-/* Error handler */
-void Error_Handler(void)
-{
-    /* TODO: Implement error handling */
-    /* In case of error:
-     * - Turn off fan for safety
-     * - Flash LED to indicate error
-     * - Enter infinite loop or reset system
-     */
+    ErrorStatus HSEStartUpStatus;
     
-    /* Safety: Turn off fan */
-    IoHwAb_SetFanDuty(0);
+    /* Reset RCC configuration */
+    RCC_DeInit();
     
-    /* Flash LED to indicate error */
-    while (1)
+    /* Enable HSE (High Speed External) oscillator */
+    RCC_HSEConfig(RCC_HSE_ON);
+    
+    /* Wait for HSE to be ready */
+    HSEStartUpStatus = RCC_WaitForHSEStartUp();
+    
+    if(HSEStartUpStatus == SUCCESS)
+    {   
+        FLASH_SetLatency(FLASH_Latency_2); // why need this code
+        FLASH_PrefetchBufferCmd(FLASH_PrefetchBuffer_Enable);
+        /* Configure AHB clock (HCLK) */
+        RCC_HCLKConfig(RCC_SYSCLK_Div1);    // AHB = SYSCLK = 72MHz
+        
+        /* Configure APB1 clock (PCLK1) */
+        RCC_PCLK1Config(RCC_HCLK_Div2);     // APB1 = 36MHz (Timer clock = 72MHz)
+        
+        /* Configure APB2 clock (PCLK2) */
+        RCC_PCLK2Config(RCC_HCLK_Div1);     // APB2 = 72MHz
+        
+        /* Configure PLL: HSE × 9 = 8MHz × 9 = 72MHz */
+        RCC_PLLConfig(RCC_PLLSource_HSE_Div1, RCC_PLLMul_9);
+        
+        /* Enable PLL */
+        RCC_PLLCmd(ENABLE);
+        
+        /* Wait for PLL to be ready */
+        while(RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET);
+        
+        /* Select PLL as system clock source */
+        RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+        
+        /* Wait until PLL is used as system clock source */
+        while(RCC_GetSYSCLKSource() != 0x08);
+    }
+    else
     {
-        IoHwAb_SetLed(TRUE);
-        for (volatile uint32 i = 0; i < 500000; i++) __asm("nop");
-        IoHwAb_SetLed(FALSE);
-        for (volatile uint32 i = 0; i < 500000; i++) __asm("nop");
+        /* HSE failed to start - handle error */
+        /* You can add error handling here */
+        while(1); // Infinite loop - system halt
     }
 }
 
-/*
- * =====================================================
- *  TODO List for Students:
- * =====================================================
- * 
- * 1. Implement proper timing mechanism instead of busy-wait loops
- *    - Use SysTick timer or other timer for precise timing
- *    - Consider using RTOS if available
- * 
- * 2. Add temperature filtering
- *    - Implement moving average filter to reduce noise
- *    - Add hysteresis to prevent oscillation at thresholds
- * 
- * 3. Add safety features
- *    - Temperature sensor failure detection
- *    - Fan failure detection (current sensing)
- *    - Emergency shutdown procedures
- * 
- * 4. Add debugging/monitoring features
- *    - UART output for monitoring temperature and fan status
- *    - SWO debug output
- *    - Consider adding potentiometer for manual fan control
- * 
- * 5. Optimize power consumption
- *    - Use sleep modes when possible
- *    - Optimize ADC conversion timing
- * 
- * 6. Add user interface (optional)
- *    - Multiple LEDs for different status
- *    - Buzzer for temperature alarms
- *    - LCD display for temperature reading
- * 
- * =====================================================
- */
+
+
+

@@ -15,7 +15,7 @@
 *                                 INCLUDE FILES                                        *
 ****************************************************************************************/
 #include "Adc_Hw.h"
-#include "Adc_Cfg.h"
+#include "Config/Inc/Adc_Cfg.h"
 #include "Adc_Types.h"
 #include "Std_Types.h"
 #include "stm32f10x.h"
@@ -32,12 +32,13 @@
 /****************************************************************************************
 *                                 QUEUE CONFIGURATIONS                                 *
 ****************************************************************************************/
+ #if(ADC_ENABLE_QUEUEING == STD_ON)
 /* Queue for ADC Hardware Unit 1 */
 static Adc_GroupType AdcHw_GroupQueueHw1[ADC1_QUEUE_SIZE] = {ADC_INVALID_GROUP_ID};
 
 /* Queue for ADC Hardware Unit 2 */
 static Adc_GroupType AdcHw_GroupQueueHw2[ADC2_QUEUE_SIZE] = {ADC_INVALID_GROUP_ID};
-
+#endif
 /* Runtime data arrays */
 static volatile Adc_RuntimeGroupType Adc_RuntimeGroups[ADC_MAX_GROUPS] = {0};
 static volatile Adc_RuntimeHwUnitType Adc_RuntimeHwUnits[ADC_MAX_HW_UNITS] = 
@@ -46,34 +47,21 @@ static volatile Adc_RuntimeHwUnitType Adc_RuntimeHwUnits[ADC_MAX_HW_UNITS] =
     {
         .CurrentGroupId = ADC_INVALID_GROUP_ID,
         .HwUnitState    = HW_STATE_IDLE,
+        #if(ADC_ENABLE_QUEUEING == STD_ON)
         .QueueGroup     = AdcHw_GroupQueueHw1,        
         .QueueMaxSize   = ADC_DEFAULT_QUEUE_SIZE,         
         .QueueHead      = 0,              
         .QueueTail      = 0,
-        .QueueCount     = 0,             
+        .QueueCount     = 0,     
+        #endif        
     },
-    /* ADC Hardware Unit 2 */
-    {
-        .CurrentGroupId = ADC_INVALID_GROUP_ID,
-        .HwUnitState    = HW_STATE_IDLE,
-        .QueueGroup     = AdcHw_GroupQueueHw2,            
-        .QueueMaxSize   = ADC_DEFAULT_QUEUE_SIZE,         
-        .QueueHead      = 0,          
-        .QueueTail      = 0,              
-        .QueueCount     = 0,
-    }
 };
+
 
 /* Deferred processing variables */
 static volatile uint8 AdcHw_DeferredProcessingFlag[ADC_MAX_HW_UNITS] = {0};
 static volatile Adc_HwUnitType AdcHw_PendingUnits[ADC_MAX_HW_UNITS];
 static volatile uint8 AdcHw_PendingCount = 0;
-
-/* ISR performance tracking */
-#if (ADC_ENABLE_ISR_MONITORING == STD_ON)
-static uint32 AdcHw_IsrStartTime[ADC_MAX_HW_UNITS];
-static uint32 AdcHw_MaxIsrTime[ADC_MAX_HW_UNITS];
-#endif
 
 /****************************************************************************************
 *                                 STATIC FUNCTION PROTOTYPES                          *
@@ -109,7 +97,7 @@ Std_ReturnType AdcHw_Init(Adc_HwUnitType HwUnitId)
     
     /* Get ADC hardware module */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -171,7 +159,7 @@ Std_ReturnType AdcHw_DeInit(Adc_HwUnitType HwUnitId)
     
     /* Get ADC hardware module */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -229,7 +217,7 @@ Std_ReturnType AdcHw_StartSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gr
         return E_NOT_OK;
     }
 
-    #if (ADC_ENABLE_QUEUING == STD_ON)
+    #if (ADC_ENABLE_QUEUEING == STD_ON)
     /* Check is it called from start software not from recall or stop software */
     if (Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId != GroupId)
     {
@@ -316,7 +304,7 @@ Std_ReturnType AdcHw_StopSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
     /* Check if this group is currently converting */
     if (Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId != GroupId)
     {
-        #if (ADC_ENABLE_QUEUING == STD_ON)
+        #if (ADC_ENABLE_QUEUEING == STD_ON)
         /* Try to remove from queue */
         return AdcHw_RemoveGroupFromQueue(HwUnitId, GroupId);
         #else
@@ -326,7 +314,7 @@ Std_ReturnType AdcHw_StopSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
 
     /* Get ADC hardware module first - common for both paths */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -347,7 +335,7 @@ Std_ReturnType AdcHw_StopSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
     ADC_SoftwareStartConvCmd(ADCx, DISABLE);
     ADC_Cmd(ADCx, DISABLE);
     
-    #if (ADC_ENABLE_QUEUING == STD_ON)
+    #if (ADC_ENABLE_QUEUEING == STD_ON)
         /* Try to process next group from queue if available */
         Adc_GroupType NextGroup = AdcHw_GetNextGroupFromQueue(HwUnitId);
         if (NextGroup != ADC_INVALID_GROUP_ID)
@@ -363,7 +351,7 @@ Std_ReturnType AdcHw_StopSwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
     return E_OK;
 }
 
-#if (ADC_ENABLE_QUEUING == STD_ON)
+#if (ADC_ENABLE_QUEUEING == STD_ON)
 /**
  * @brief Recall software-triggered conversion  
  * @param[in] HwUnitId ADC hardware unit ID
@@ -413,7 +401,7 @@ Std_ReturnType AdcHw_StartHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gr
     
     /* Get ADC hardware module */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -482,7 +470,7 @@ Std_ReturnType AdcHw_StopHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
     
     /* Get ADC hardware module */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -498,7 +486,7 @@ Std_ReturnType AdcHw_StopHwConversion(Adc_HwUnitType HwUnitId, Adc_GroupType Gro
     // Adc_RuntimeHwUnits[HwUnitId].HwUnitState = FALSE;
     Adc_RuntimeHwUnits[HwUnitId].HwUnitState = HW_STATE_IDLE;
     AdcHw_SetGroupStatus(GroupId, ADC_IDLE);
-    #if (ADC_ENABLE_QUEUING == STD_ON)
+    #if (ADC_ENABLE_QUEUEING == STD_ON)
         AdcHw_RecallSwConversion(HwUnitId);
     #endif
     return E_OK;
@@ -542,7 +530,7 @@ Std_ReturnType AdcHw_ConfigureGroup(Adc_HwUnitType HwUnitId, Adc_GroupType Group
 {
     /* Configure channels for this group */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -575,7 +563,7 @@ Std_ReturnType AdcHw_ReadResult(Adc_HwUnitType HwUnitId,
                                Adc_ValueGroupType* ResultPtr)
 {
     /* Validate parameters */
-    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE) || (ResultPtr == NULL))
+    if ((ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE) || (ADC_HW_IS_VALID_GROUP(GroupId) == FALSE) || (ResultPtr == NULL_PTR))
     {
         return E_NOT_OK;
     }
@@ -631,7 +619,7 @@ void AdcHw_HandleReadResultState(Adc_HwUnitType HwUnitId,
             ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
             ADC_Cmd(ADCx, DISABLE);
             
-            #if (ADC_ENABLE_QUEUING == STD_ON)
+            #if (ADC_ENABLE_QUEUEING == STD_ON)
             /* Signal group completion for deferred processing */
             AdcHw_DeferredProcessingFlag[HwUnitId] = 1;
             if (AdcHw_PendingCount < ADC_MAX_HW_UNITS)
@@ -730,7 +718,7 @@ Std_ReturnType AdcHw_ResetHwRuntime(Adc_HwUnitType HwUnitId)
     Adc_RuntimeHwUnits[HwUnitId].CurrentGroupId = ADC_INVALID_GROUP_ID;
     Adc_RuntimeHwUnits[HwUnitId].HwUnitState = HW_STATE_IDLE;
 
-    #if( ADC_ENABLE_QUEUING == STD_ON)
+    #if( ADC_ENABLE_QUEUEING == STD_ON)
     /* Reset runtime data */
     if(Adc_RuntimeHwUnits[HwUnitId].QueueCount != 0)
     {
@@ -793,7 +781,7 @@ Std_ReturnType AdcHw_EnableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptTyp
     
     /* Get ADC hardware module */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -802,15 +790,17 @@ Std_ReturnType AdcHw_EnableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptTyp
     if (InterruptType & ADC_INTERRUPT_EOC)
     {
         ADC_ITConfig(ADCx, ADC_IT_EOC, ENABLE);
+        NVIC_EnableIRQ(ADC1_2_IRQn);
     }
     
     if (InterruptType & ADC_INTERRUPT_DMA_TC)
     {
         /* Enable DMA transfer complete interrupt */
         DMA_Channel_TypeDef* DMAx = ADC_HW_GET_DMA_CHANNEL(HwUnitId);
-        if (DMAx != NULL)
+        if (DMAx != NULL_PTR)
         {
             DMA_ITConfig(DMAx, DMA_IT_TC, ENABLE);
+            NVIC_EnableIRQ(DMA1_Channel1_IRQn);
         }
     }
     
@@ -833,7 +823,7 @@ Std_ReturnType AdcHw_DisableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptTy
     
     /* Get ADC hardware module */
     ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -876,11 +866,7 @@ Std_ReturnType AdcHw_DisableInterrupt(Adc_HwUnitType HwUnitId, uint8 InterruptTy
  * @return void
  */
 void AdcHw_InterruptHandler(ADC_TypeDef* ADCx, Adc_HwUnitType HwUnitId)
-{
-    #if (ADC_ENABLE_ISR_MONITORING == STD_ON)
-    AdcHw_IsrStartTime[HwUnitId] = AdcHw_GetCurrentTime();
-    #endif
-    
+{    
     /* Validate hardware unit */
     if (ADC_HW_IS_VALID_UNIT(HwUnitId) == FALSE)
     {
@@ -904,13 +890,6 @@ void AdcHw_InterruptHandler(ADC_TypeDef* ADCx, Adc_HwUnitType HwUnitId)
     /* Handle channel sequencing */
     AdcHw_HandleChannelSequencing(HwUnitId, CurrentGroup);
     
-    #if (ADC_ENABLE_ISR_MONITORING == STD_ON)
-    uint32 IsrDuration = AdcHw_GetCurrentTime() - AdcHw_IsrStartTime[HwUnitId];
-    if (IsrDuration > AdcHw_MaxIsrTime[HwUnitId])
-    {
-        AdcHw_MaxIsrTime[HwUnitId] = IsrDuration;
-    }
-    #endif
 }
 
 /**
@@ -956,7 +935,7 @@ void AdcHw_DmaInterruptHandler(DMA_Channel_TypeDef* DMAx, Adc_HwUnitType HwUnitI
         ADC_TypeDef* ADCx = ADC_HW_GET_MODULE_ID(HwUnitId);
         ADC_Cmd(ADCx, DISABLE);
         
-        #if (ADC_ENABLE_QUEUING == STD_ON)
+        #if (ADC_ENABLE_QUEUEING == STD_ON)
         /* Signal group completion for deferred processing */
         AdcHw_DeferredProcessingFlag[HwUnitId] = 1;
         if (AdcHw_PendingCount < ADC_MAX_HW_UNITS)
@@ -976,7 +955,7 @@ void AdcHw_DmaInterruptHandler(DMA_Channel_TypeDef* DMAx, Adc_HwUnitType HwUnitI
 /****************************************************************************************
 *                              QUEUE MANAGEMENT FUNCTIONS                             *
 ****************************************************************************************/
-#if (ADC_ENABLE_QUEUING == STD_ON)
+#if (ADC_ENABLE_QUEUEING == STD_ON)
 /**
  * @brief Add group to conversion queue
  * @param[in] HwUnitId ADC hardware unit ID
@@ -1124,13 +1103,13 @@ Std_ReturnType AdcHw_ClearQueue(Adc_HwUnitType HwUnitId)
 {
     return AdcHw_ResetHwRuntime(HwUnitId);
 }
-#endif /* ADC_ENABLE_QUEUING */
+#endif /* ADC_ENABLE_QUEUEING */
 
 /****************************************************************************************
 *                                 DEFERRED PROCESSING FUNCTIONS                       *
 ****************************************************************************************/
 // TODO : FOCUS Remove this function
-#if (ADC_ENABLE_QUEUING == STD_ON)
+#if (ADC_ENABLE_QUEUEING == STD_ON)
 /**
  * @brief Main function for deferred processing
  * @return void
@@ -1325,7 +1304,7 @@ static inline Std_ReturnType AdcHw_ConfigureHwModuleGroupIT( Adc_HwUnitType HwUn
     // need refix this
     // const Adc_HwUnitDefType* HwUnitConfig = &Adc_HwUnitConfig[HwUnitId];
    
-    if (ADCx == NULL)
+    if (ADCx == NULL_PTR)
     {
         return E_NOT_OK;
     }
@@ -1384,7 +1363,8 @@ static inline Std_ReturnType AdcHw_ConfigureClocks(Adc_HwUnitType HwUnitId)
     }
     
     /* Configure ADC clock prescaler */
-    // RCC_ADCCLKConfig(ADC_CLOCK_PRESCALER);
+    // TODO BIG BUG
+    RCC_ADCCLKConfig(RCC_PCLK2_Div6);
     
     return E_OK;
 }
@@ -1547,7 +1527,7 @@ static void AdcHw_HandleChannelSequencing(Adc_HwUnitType HwUnitId, Adc_GroupType
                 ADC_SoftwareStartConvCmd(ADCx, DISABLE);
                 ADC_Cmd(ADCx, DISABLE);
                
-                #if (ADC_ENABLE_QUEUING == STD_ON)
+                #if (ADC_ENABLE_QUEUEING == STD_ON)
                     /* All samples completed */
                     /* Tell the adc main function to do next task */
                     AdcHw_DeferredProcessingFlag[HwUnitId] = 1;

@@ -42,15 +42,15 @@
 /****************************************************************************************
 *                              SYSTEM CONFIGURATION                                    *
 ****************************************************************************************/
-#define PWM_MAX_CHANNELS            8       /*!< Maximum number of PWM channels */
-#define PWM_MAX_HW_UNITS            4       /*!< Maximum number of hardware units */
+#define PWM_MAX_CHANNELS            1       /*!< Maximum number of PWM channels */
+#define PWM_MAX_HW_UNITS            1       /*!< Maximum number of hardware units */
 #define PWM_SYSTEM_FREQUENCY        72000000UL /*!< System frequency in Hz */
 
 /****************************************************************************************
 *                              TIMING CONFIGURATION                                    *
 ****************************************************************************************/
-#define PWM_DEFAULT_FREQUENCY       1000    /*!< Default PWM frequency in Hz */
-#define PWM_DEFAULT_PERIOD          10000   /*!< Default PWM period in timer ticks (10KHz/10000 = 1Hz)*/
+#define PWM_DEFAULT_FREQUENCY       10000    /*!< Default PWM frequency in Hz */
+#define PWM_DEFAULT_PERIOD          100   /*!< Default PWM period in timer ticks (1MHz/100 = 10kHz)*/
 #define PWM_DEFAULT_DUTY_CYCLE      0x4000  /*!< Default duty cycle (50%) */
 #define PWM_MIN_PERIOD              1       /*!< Minimum period value */
 #define PWM_MAX_PERIOD              65535   /*!< Maximum period value */
@@ -60,27 +60,30 @@
 ****************************************************************************************/
 /* Timer 1 Configuration */
 #define PWM_TIM1_ENABLED            STD_ON
-#define PWM_TIM1_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
+#define PWM_TIM1_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
 #define PWM_TIM1_MAX_PERIOD         PWM_DEFAULT_PERIOD   /*!< Maximum period for Timer 1 */
-#define PWM_TIM1_CHANNELS           4       /*!< Number of channels in Timer 1 */
+#define PWM_TIM1_CHANNELS           1       /*!< Number of channels in Timer 1 */
 
 /* Timer 2 Configuration */
-#define PWM_TIM2_ENABLED            STD_ON
-#define PWM_TIM2_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
-#define PWM_TIM2_MAX_PERIOD         PWM_DEFAULT_PERIOD   /*!< Maximum period for Timer 2 */
-#define PWM_TIM2_CHANNELS           4       /*!< Number of channels in Timer 2 */
+#define PWM_TIM2_ENABLED            STD_OFF
+#define PWM_TIM2_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
+#define PWM_TIM2_MAX_PERIOD         PWM_DEFAULT_PERIOD   /*!< Maximum period for Timer 1 */
+#define PWM_TIM2_CHANNELS           1       /*!< Number of channels in Timer 1 */
 
-/* Timer 3 Configuration - DISABLED */
+
+/* Timer 3 Configuration */
 #define PWM_TIM3_ENABLED            STD_OFF
-#define PWM_TIM3_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
-#define PWM_TIM3_MAX_PERIOD         65535   /*!< Maximum period for Timer 3 */
-#define PWM_TIM3_CHANNELS           4       /*!< Number of channels in Timer 3 */
+#define PWM_TIM3_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
+#define PWM_TIM3_MAX_PERIOD         PWM_DEFAULT_PERIOD   /*!< Maximum period for Timer 1 */
+#define PWM_TIM3_CHANNELS           1       /*!< Number of channels in Timer 1 */
 
-/* Timer 4 Configuration - DISABLED */
+
+/* Timer 4 Configuration */
 #define PWM_TIM4_ENABLED            STD_OFF
-#define PWM_TIM4_PRESCALER          7200      /*!< Prescaler for 10KHz timer clock */
-#define PWM_TIM4_MAX_PERIOD         65535   /*!< Maximum period for Timer 4 */
-#define PWM_TIM4_CHANNELS           4       /*!< Number of channels in Timer 4 */
+#define PWM_TIM4_PRESCALER          72      /*!< Prescaler for 1MHz timer clock */
+#define PWM_TIM4_MAX_PERIOD         PWM_DEFAULT_PERIOD   /*!< Maximum period for Timer 1 */
+#define PWM_TIM4_CHANNELS           1       /*!< Number of channels in Timer 1 */
+
 
 /****************************************************************************************
 *                              SAFETY CONFIGURATION                                    *
@@ -98,15 +101,16 @@
 
 /* PWM Channel IDs - Active Channels */
 #define PWM_CHANNEL_0               0       /*!< PWM Channel 0 */
-#define PWM_CHANNEL_1               1       /*!< PWM Channel 1 */
-#define PWM_CHANNEL_2               2       /*!< PWM Channel 2 */
-#define PWM_CHANNEL_3               3       /*!< PWM Channel 3 */
-#define PWM_CHANNEL_4               4       /*!< PWM Channel 4 */
-#define PWM_CHANNEL_5               5       /*!< PWM Channel 5 */
-#define PWM_CHANNEL_6               6       /*!< PWM Channel 6 */
-#define PWM_CHANNEL_7               7       /*!< PWM Channel 7 */
+
 
 /* PWM Channel IDs - Unused Channels (Commented Out) */
+// #define PWM_CHANNEL_1               1       /*!< PWM Channel 1 */
+// #define PWM_CHANNEL_2               2       /*!< PWM Channel 2 */
+// #define PWM_CHANNEL_3               3       /*!< PWM Channel 3 */
+// #define PWM_CHANNEL_4               4       /*!< PWM Channel 4 */
+// #define PWM_CHANNEL_5               5       /*!< PWM Channel 5 */
+// #define PWM_CHANNEL_6               6       /*!< PWM Channel 6 */
+// #define PWM_CHANNEL_7               7       /*!< PWM Channel 7 */
 // #define PWM_CHANNEL_8               8       /*!< PWM Channel 8 */
 // #define PWM_CHANNEL_9               9       /*!< PWM Channel 9 */
 // #define PWM_CHANNEL_10              10      /*!< PWM Channel 10 */
@@ -118,7 +122,7 @@
 
 /* PWM Hardware Unit Constants */
 #define PWM_HW_UNIT_INVALID         0xFF    /*!< Invalid hardware unit */
-#define PWM_CHANNELS_PER_HW_UNIT    1       /*!< Channels per hardware unit */
+#define PWM_CHANNELS_PER_HW_UNIT    4       /*!< Channels per hardware unit */
 
 /* PWM Clock Source Configuration */
 #define PWM_CLOCK_SOURCE_INTERNAL   0       /*!< Internal clock source */
@@ -133,8 +137,8 @@
 #define PWM_MASTER_SLAVE_ENABLED    1       /*!< Master/slave mode enabled */
 
 /* PWM Configuration Constants */
-#define PWM_CONFIGURED_CHANNELS     8       /*!< Number of configured channels */
-#define PWM_MAX_NOTIFICATIONS       8       /*!< Maximum number of notification functions */
+#define PWM_CONFIGURED_CHANNELS     1       /*!< Number of configured channels */
+#define PWM_MAX_NOTIFICATIONS       1       /*!< Maximum number of notification functions */
 
 /* PWM Duty Cycle Constants */
 #define PWM_DUTY_CYCLE_100_PERCENT  0x8000  /*!< 100% duty cycle */

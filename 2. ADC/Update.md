@@ -35,9 +35,12 @@
 - DMA circular mode state handling
 - Buffer setup validation improvements
 - Runtime group conversion handling
+- Read Group issue fixed
 
 ### Next Priority:
 - Complete remaining oneshot testing (circular mode)
 - Finalize DMA optimization tasks
 - Complete Version 3.0 group processing changes
-- `ReadGroup` and `GetLastStreamBuffer` state issue
+- `GetLastStreamBuffer` state issue
+- Clock issue : Divided for allowed clock
+- Interrupt enable and disable 
